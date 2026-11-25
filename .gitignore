@@ -1,0 +1,17 @@
+# Local secrets and environment files
+.env
+.env.*
+!.env.example
+
+# Supabase local state
+supabase/.temp/
+
+# Dependencies and generated output
+node_modules/
+dist/
+coverage/
+
+# Logs and operating system files
+*.log
+Thumbs.db
+.DS_Store

@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="ms">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Senarai Rekod | PPD Limbang</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body class="min-h-screen bg-slate-100 text-slate-800">
+  <header class="bg-blue-950 text-white"><div class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-5">
+    <div><p class="text-xs font-semibold uppercase tracking-wide text-amber-300">PPD Limbang, Sarawak</p><h1 class="text-xl font-bold">Sistem Maklumbalas & Tindakan Sekolah</h1></div>
+    <nav class="flex gap-2 text-sm"><a class="rounded bg-white/15 px-3 py-2" href="index.html">Senarai</a><a class="rounded px-3 py-2 hover:bg-white/15" href="borang.html">Rekod baharu</a><a class="rounded px-3 py-2 hover:bg-white/15" href="laporan.html">Laporan</a></nav>
+  </div></header>
+  <main class="mx-auto max-w-6xl space-y-5 px-4 py-6">
+    <section class="grid gap-3 sm:grid-cols-3"><div class="rounded-xl bg-white p-4 shadow-sm">Jumlah rekod<strong id="statTotal" class="mt-1 block text-2xl">0</strong></div><div class="rounded-xl bg-white p-4 shadow-sm">Menunggu maklumbalas<strong id="statPending" class="mt-1 block text-2xl">0</strong></div><div class="rounded-xl bg-white p-4 shadow-sm">Selesai<strong id="statDone" class="mt-1 block text-2xl">0</strong></div></section>
+    <section class="rounded-xl bg-white p-4 shadow-sm"><div class="flex flex-col gap-3 sm:flex-row"><input id="searchInput" class="min-w-0 flex-1 rounded border border-slate-300 px-3 py-2" placeholder="Cari sekolah, pegawai atau dapatan"><select id="filterStatus" class="rounded border border-slate-300 px-3 py-2"><option value="SEMUA">Semua status</option><option>Menunggu Maklumbalas</option><option>Dalam Tindakan</option><option>Selesai</option></select><a href="borang.html" class="rounded bg-blue-900 px-4 py-2 text-center font-semibold text-white">+ Rekod baharu</a></div></section>
+    <section id="recordsContainer" class="space-y-3"></section><p id="emptyState" class="hidden rounded-xl bg-white p-8 text-center text-slate-500">Tiada rekod dijumpai.</p>
+  </main>
+  <script src="app.js"></script>
+</body></html>

@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="ms">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Borang Rekod | PPD Limbang</title><script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body class="min-h-screen bg-slate-100 text-slate-800">
+  <header class="bg-blue-950 text-white"><div class="mx-auto flex max-w-4xl items-center justify-between gap-4 px-4 py-5"><div><p class="text-xs font-semibold uppercase text-amber-300">PPD Limbang</p><h1 class="text-xl font-bold">Borang Rekod Lawatan</h1></div><nav class="flex gap-2 text-sm"><a class="rounded px-3 py-2 hover:bg-white/15" href="index.html">Senarai</a><a class="rounded bg-white/15 px-3 py-2" href="borang.html">Borang</a><a class="rounded px-3 py-2 hover:bg-white/15" href="laporan.html">Laporan</a></nav></div></header>
+  <main class="mx-auto max-w-4xl px-4 py-6"><form id="visitForm" class="space-y-5 rounded-xl bg-white p-5 shadow-sm">
+    <input type="hidden" id="recordId">
+    <div class="grid gap-4 sm:grid-cols-2"><label class="space-y-1 text-sm font-medium">Nama sekolah<input required id="namaSekolah" class="block w-full rounded border border-slate-300 px-3 py-2"></label><label class="space-y-1 text-sm font-medium">Tarikh lawatan<input required type="date" id="tarikh" class="block w-full rounded border border-slate-300 px-3 py-2"></label><label class="space-y-1 text-sm font-medium">Masa<input type="time" id="masa" class="block w-full rounded border border-slate-300 px-3 py-2"></label><label class="space-y-1 text-sm font-medium">Nama pegawai<input required id="namaPegawai" class="block w-full rounded border border-slate-300 px-3 py-2"></label><label class="space-y-1 text-sm font-medium">Jawatan<input required id="jawatan" class="block w-full rounded border border-slate-300 px-3 py-2"></label><label class="space-y-1 text-sm font-medium">Status<select id="status" class="block w-full rounded border border-slate-300 px-3 py-2"><option>Menunggu Maklumbalas</option><option>Dalam Tindakan</option><option>Selesai</option></select></label></div>
+    <label class="block space-y-1 text-sm font-medium">Dapatan pegawai<textarea required id="dapatan" rows="4" class="block w-full rounded border border-slate-300 px-3 py-2"></textarea></label>
+    <label class="block space-y-1 text-sm font-medium">Maklumbalas dan tindakan sekolah<textarea id="maklumbalas" rows="4" class="block w-full rounded border border-slate-300 px-3 py-2"></textarea></label>
+    <div class="grid gap-4 sm:grid-cols-2"><label class="space-y-2 text-sm font-medium">Gambar dapatan<input id="gambarDapatan" type="file" accept="image/*" multiple class="block w-full text-sm"><span id="gambarDapatanPreview" class="flex flex-wrap gap-2"></span></label><label class="space-y-2 text-sm font-medium">Gambar maklumbalas<input id="gambarMaklumbalas" type="file" accept="image/*" multiple class="block w-full text-sm"><span id="gambarMaklumbalasPreview" class="flex flex-wrap gap-2"></span></label></div>
+    <div class="flex justify-end gap-2 border-t pt-4"><a href="index.html" class="rounded border px-4 py-2">Batal</a><button class="rounded bg-blue-900 px-4 py-2 font-semibold text-white">Simpan rekod</button></div>
+  </form></main><script src="app.js"></script>
+</body></html>
