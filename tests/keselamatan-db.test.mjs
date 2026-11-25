@@ -344,6 +344,21 @@ test('log audit merekod pelaku dan perubahan', async () => {
   await gagal(sebagai('admin', (tx) => tx.query(`delete from public.log_audit`)), /permission denied/);
 });
 
+test('log masuk sekolah direkod oleh fungsi Edge (service_role); sekolah tidak boleh membaca atau menulis log', async () => {
+  await db.transaction(async (tx) => {
+    await tx.exec('set local role service_role');
+    await tx.query(
+      `insert into public.log_audit (pelaku, emel, jadual, tindakan, data_baru)
+       values ($1::uuid, $2::text, 'auth', 'LOG MASUK', jsonb_build_object('sekolah', 'SK Limbang', 'ip', '203.0.113.5'))`,
+      [ID.skA, EMEL.skA]);
+  });
+  const r = await sebagai('admin', (tx) => tx.query(`select emel, data_baru->>'ip' as ip from public.log_audit where tindakan = 'LOG MASUK'`));
+  assert.deepEqual(r.rows, [{ emel: EMEL.skA, ip: '203.0.113.5' }]);
+  const s = await sebagai('skA', (tx) => tx.query('select * from public.log_audit'));
+  assert.equal(s.rows.length, 0);
+  await gagal(sebagai('skA', (tx) => tx.query(`insert into public.log_audit (jadual, tindakan) values ('auth', 'LOG MASUK')`)), /permission denied/);
+});
+
 test('fungsi skema private tidak boleh dipanggil oleh anon', async () => {
   await gagal(sebagai('anon', (tx) => tx.query('select private.adalah_admin()')), /permission denied/);
 });

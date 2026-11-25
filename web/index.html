@@ -36,28 +36,15 @@
             <button type="button" role="tab" id="tabAdmin" aria-selected="false" aria-controls="panelAdmin">Pentadbir PPD</button>
           </div>
 
-          <!-- SEKOLAH: emel rasmi -> kod sekali guna -->
+          <!-- SEKOLAH: emel rasmi sahaja -->
           <section id="panelSekolah" role="tabpanel" aria-labelledby="tabSekolah">
-            <form id="borangEmelSekolah" class="tindanan" novalidate>
+            <form id="borangSekolah" class="tindanan" novalidate>
               <label class="medan">
                 <span>Emel rasmi sekolah <span class="wajib">*</span></span>
                 <input class="input" type="email" id="emelSekolah" name="email" autocomplete="email" inputmode="email" required maxlength="254" placeholder="cth: yba1234@moe.edu.my">
               </label>
-              <p class="nota">Kod pengesahan 6 digit akan dihantar ke emel rasmi sekolah. Tiada kata laluan diperlukan.</p>
-              <button type="submit" class="btn btn-utama btn-penuh" id="btnHantarKod">Hantar kod log masuk</button>
-            </form>
-
-            <form id="borangKodSekolah" class="tindanan" novalidate hidden>
-              <p class="mesej mesej-info">Kod telah dihantar ke <strong id="emelDihantar"></strong>. Semak peti masuk (dan folder spam).</p>
-              <label class="medan">
-                <span>Kod pengesahan <span class="wajib">*</span></span>
-                <input class="input input-kod" type="text" id="kodOtp" name="one-time-code" autocomplete="one-time-code" inputmode="numeric" pattern="[0-9]{6,10}" minlength="6" maxlength="10" required placeholder="••••••">
-              </label>
-              <button type="submit" class="btn btn-utama btn-penuh" id="btnSahkanKod">Sahkan &amp; log masuk</button>
-              <div class="baris-pautan">
-                <button type="button" class="btn-pautan" id="btnTukarEmel">Tukar emel</button>
-                <button type="button" class="btn-pautan" id="btnHantarSemula">Hantar semula kod</button>
-              </div>
+              <p class="nota">Masukkan emel rasmi sekolah yang didaftarkan oleh PPD. Tiada kata laluan diperlukan.</p>
+              <button type="submit" class="btn btn-utama btn-penuh" id="btnLogMasukSekolah">Log masuk sekolah</button>
             </form>
           </section>
 
@@ -73,22 +60,7 @@
                 <input class="input" type="password" id="kataLaluan" name="password" autocomplete="current-password" required maxlength="128">
               </label>
               <button type="submit" class="btn btn-utama btn-penuh" id="btnLogMasukAdmin">Log masuk pentadbir</button>
-              <div class="baris-pautan">
-                <span></span>
-                <button type="button" class="btn-pautan" id="btnLupa">Tetapkan / lupa kata laluan?</button>
-              </div>
-            </form>
-
-            <form id="borangLupa" class="tindanan" novalidate hidden>
-              <p class="mesej mesej-info">Masukkan emel pentadbir yang berdaftar. Pautan untuk menetapkan kata laluan akan dihantar ke emel tersebut.</p>
-              <label class="medan">
-                <span>Emel rasmi pentadbir <span class="wajib">*</span></span>
-                <input class="input" type="email" id="emelLupa" autocomplete="email" inputmode="email" required maxlength="254">
-              </label>
-              <button type="submit" class="btn btn-utama btn-penuh" id="btnHantarPautan">Hantar pautan</button>
-              <div class="baris-pautan">
-                <button type="button" class="btn-pautan" id="btnKembaliAdmin">Kembali ke log masuk</button>
-              </div>
+              <p class="nota">Lupa kata laluan? Minta pentadbir PPD lain menetapkan semula kata laluan anda melalui tab <strong>Pentadbir</strong>.</p>
             </form>
           </section>
         </div>

@@ -37,6 +37,7 @@
           <div class="pengguna-peranan" id="penggunaPeranan"></div>
           <div class="pengguna-nama" id="penggunaNama"></div>
         </div>
+        <button type="button" class="btn btn-telus btn-kecil" id="btnKataLaluanSaya" data-admin hidden>Kata laluan</button>
         <button type="button" class="btn btn-telus btn-kecil" id="btnKeluar">Log keluar</button>
       </div>
     </div>
@@ -314,7 +315,7 @@
         <label class="medan">
           <span>Emel rasmi sekolah (untuk log masuk)</span>
           <input class="input" type="email" id="sEmel" maxlength="254" autocomplete="off" placeholder="cth: yba1234@moe.edu.my">
-          <span class="nota">Hanya pemilik peti emel ini boleh log masuk sebagai sekolah.</span>
+          <span class="nota">Sesiapa yang memasukkan emel ini di halaman log masuk akan log masuk sebagai sekolah ini. Setiap log masuk direkodkan dalam Log Audit.</span>
         </label>
         <label class="kotak-semak"><input type="checkbox" id="sAktif" checked> Aktif (dibenarkan log masuk)</label>
       </div>
@@ -347,6 +348,34 @@
       <div class="dialog-kaki">
         <button type="button" class="btn btn-garis" data-tutup>Batal</button>
         <button type="submit" class="btn btn-utama" id="btnSimpanPentadbir">Simpan</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- ================= DIALOG: KATA LALUAN PENTADBIR ================= -->
+  <dialog id="dialogKataLaluan" class="kecil" aria-labelledby="tajukKataLaluan">
+    <form id="borangKataLaluan" novalidate>
+      <div class="dialog-kepala">
+        <h2 id="tajukKataLaluan">Tetapkan kata laluan</h2>
+        <button type="button" class="dialog-tutup" data-tutup aria-label="Tutup">×</button>
+      </div>
+      <div class="dialog-isi">
+        <div id="mesejKataLaluan" class="mesej" role="alert" hidden></div>
+        <p class="nota">Untuk: <strong id="sasaranKataLaluan"></strong></p>
+        <input type="text" id="klNamaPengguna" autocomplete="username" hidden>
+        <label class="medan">
+          <span>Kata laluan baharu <span class="wajib">*</span></span>
+          <input class="input" type="password" id="klBaharu" autocomplete="new-password" minlength="12" maxlength="72" required>
+          <span class="nota">Sekurang-kurangnya 12 aksara, dengan huruf besar, huruf kecil dan nombor.</span>
+        </label>
+        <label class="medan">
+          <span>Sahkan kata laluan <span class="wajib">*</span></span>
+          <input class="input" type="password" id="klSahkan" autocomplete="new-password" minlength="12" maxlength="72" required>
+        </label>
+      </div>
+      <div class="dialog-kaki">
+        <button type="button" class="btn btn-garis" data-tutup>Batal</button>
+        <button type="submit" class="btn btn-utama" id="btnSimpanKataLaluan">Simpan kata laluan</button>
       </div>
     </form>
   </dialog>

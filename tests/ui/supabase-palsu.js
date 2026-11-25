@@ -6,7 +6,8 @@
   const SIMPAN = 'palsu-keadaan';
   const simpanan = JSON.parse(sessionStorage.getItem(SIMPAN) || 'null');
   const P = (window.__PALSU = {
-    panggilan: [],
+    // Log panggilan kekal merentas halaman (log masuk -> app.html).
+    panggilan: JSON.parse(sessionStorage.getItem("palsu-panggilan") || "[]"),
     sesi: simpanan?.sesi ?? null,
     profil: simpanan?.profil ?? null,
     pendengar: [],
@@ -37,7 +38,10 @@
   });
 
   const simpan = () => sessionStorage.setItem(SIMPAN, JSON.stringify({ sesi: P.sesi, profil: P.profil }));
-  const catat = (x) => P.panggilan.push(x);
+  const catat = (x) => {
+    P.panggilan.push(x);
+    sessionStorage.setItem("palsu-panggilan", JSON.stringify(P.panggilan));
+  };
   const uuid = () => crypto.randomUUID();
   const GAMBAR = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2210%22 height=%2210%22/%3E';
 
@@ -133,15 +137,11 @@
         P.pendengar.forEach((cb) => cb('SIGNED_OUT', null));
         return { error: null };
       },
-      async signInWithOtp({ email, options }) {
-        catat({ jenis: 'auth', op: 'signInWithOtp', email, options });
-        if (!PROFIL[email]) return { data: null, error: { code: 'otp_disabled', status: 422, message: 'Signups not allowed for otp' } };
-        return { data: {}, error: null };
-      },
-      async verifyOtp({ email, token, type }) {
-        catat({ jenis: 'auth', op: 'verifyOtp', email, token, type });
-        if (token !== '123456') return { data: null, error: { code: 'otp_expired', status: 403, message: 'Token has expired or is invalid' } };
-        tetapSesi(email, 'otp');
+      async verifyOtp({ token_hash, type }) {
+        catat({ jenis: 'auth', op: 'verifyOtp', token_hash, type });
+        const emel = String(token_hash || '').replace(/^hash:/, '');
+        if (!PROFIL[emel]) return { data: null, error: { code: 'otp_expired', status: 403, message: 'Token has expired or is invalid' } };
+        tetapSesi(emel, 'otp');
         return { data: { session: P.sesi }, error: null };
       },
       async signInWithPassword({ email, password }) {
@@ -150,8 +150,6 @@
         tetapSesi(email, 'password');
         return { data: { session: P.sesi }, error: null };
       },
-      async resetPasswordForEmail(email, opsyen) { catat({ jenis: 'auth', op: 'reset', email, opsyen }); return { data: {}, error: null }; },
-      async updateUser(v) { catat({ jenis: 'auth', op: 'updateUser', ada: Boolean(v.password) }); return { data: {}, error: null }; },
     },
     from: (jadual) => new Pembina(jadual),
     async rpc(nama, arg) {
@@ -175,7 +173,25 @@
       }),
     },
     functions: {
-      async invoke(nama, { body }) { catat({ jenis: 'fn', nama, body }); return { data: { ok: true }, error: null }; },
+      // Meniru fungsi Edge "sediakan-akaun".
+      async invoke(nama, { body }) {
+        catat({ jenis: 'fn', nama, body: { ...body, kata_laluan: body.kata_laluan ? '***' : undefined } });
+        const gagal = (status, ralat) => ({
+          data: null,
+          error: { name: 'FunctionsHttpError', context: { json: async () => ({ ralat }) }, status },
+        });
+        if (body.tindakan === 'log-masuk-sekolah') {
+          const sekolah = P.db.sekolah.find((x) => x.emel === body.emel && x.aktif);
+          return { data: sekolah ? { ok: true, token_hash: `hash:${body.emel}` } : { ok: false, sebab: 'tidak-berdaftar' }, error: null };
+        }
+        if (body.tindakan === 'tetap-kata-laluan') {
+          if (P.profil?.peranan !== 'admin') return gagal(403, 'Hanya pentadbir boleh menetapkan kata laluan.');
+          if (!P.db.pentadbir.some((x) => x.emel === body.emel)) return gagal(400, 'Emel ini bukan pentadbir berdaftar.');
+          P.kataLaluan = { ...(P.kataLaluan || {}), [body.emel]: body.kata_laluan };
+          return { data: { ok: true }, error: null };
+        }
+        return gagal(400, 'Tindakan tidak diketahui.');
+      },
     },
   };
 

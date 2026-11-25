@@ -3,13 +3,14 @@
 # Hanya tetapan yang diisytiharkan di sini ditolak ke projek dihos:
 #   npx supabase config diff --remote=<ref>
 #   npx supabase config push --remote=<ref>
-# Tetapan lain (termasuk SMTP) diurus di papan pemuka; lihat docs/PENYEDIAAN.md.
+# Sistem tidak menghantar emel: sekolah log masuk dengan emel sahaja melalui
+# fungsi sediakan-akaun, dan pentadbir menggunakan kata laluan. SMTP tidak diperlukan.
 
 project_id = "mysmts"
 
 [auth]
 site_url = "https://ppdlimbang.github.io/MySMTS/"
-additional_redirect_urls = ["https://ppdlimbang.github.io/MySMTS/kata-laluan.html"]
+additional_redirect_urls = []
 # Pendaftaran awam dimatikan: akaun hanya dicipta oleh fungsi sediakan-akaun.
 enable_signup = false
 enable_anonymous_sign_ins = false
@@ -17,24 +18,13 @@ minimum_password_length = 12
 password_requirements = "lower_upper_letters_digits"
 
 [auth.email]
-# Penyedia emel mesti HIDUP (untuk kod OTP dan kata laluan);
+# Penyedia emel mesti HIDUP (log masuk kata laluan dan token sekolah);
 # pendaftaran baharu tetap disekat oleh auth.enable_signup = false.
 enabled = true
 enable_confirmations = true
 double_confirm_changes = true
 otp_length = 6
 otp_expiry = 600
-
-# Templat emel: Supabase hanya membenarkan perubahan templat selepas Custom SMTP
-# dikonfigurasi (pelan Free). Nyahkomen blok ini selepas SMTP disediakan, kemudian
-# jalankan semula config push.
-# [auth.email.template.magic_link]
-# subject = "Kod log masuk MySMTS"
-# content_path = "./supabase/templates/kod_log_masuk.html"
-#
-# [auth.email.template.recovery]
-# subject = "Tetapkan kata laluan MySMTS"
-# content_path = "./supabase/templates/tetapan_kata_laluan.html"
 
 [auth.sms]
 enabled = false

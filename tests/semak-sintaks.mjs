@@ -30,7 +30,7 @@ for (const f of ['klien.js', 'util.js']) {
   const s = baca(`js/${f}`);
   eksport[f] = new Set([...s.matchAll(/export\s+(?:async\s+)?(?:const|function|let|class)\s+([A-Za-z_$][\w$]*)/g)].map((m) => m[1]));
 }
-for (const f of ['aplikasi.js', 'log-masuk.js', 'kata-laluan.js']) {
+for (const f of ['aplikasi.js', 'log-masuk.js']) {
   const s = baca(`js/${f}`);
   for (const m of s.matchAll(/import\s*\{([^}]+)\}\s*from\s*'\.\/([\w-]+\.js)'/g)) {
     for (const nama of m[1].split(',').map((x) => x.trim()).filter(Boolean)) {
@@ -40,7 +40,7 @@ for (const f of ['aplikasi.js', 'log-masuk.js', 'kata-laluan.js']) {
 }
 
 // 3. Rujukan ID
-const halaman = { 'aplikasi.js': 'app.html', 'log-masuk.js': 'index.html', 'kata-laluan.js': 'kata-laluan.html' };
+const halaman = { 'aplikasi.js': 'app.html', 'log-masuk.js': 'index.html' };
 for (const [js, html] of Object.entries(halaman)) {
   const s = baca(`js/${js}`);
   const h = baca(html);
@@ -54,7 +54,7 @@ for (const [js, html] of Object.entries(halaman)) {
 }
 
 // 4. Pematuhan CSP
-for (const html of ['index.html', 'app.html', 'kata-laluan.html']) {
+for (const html of ['index.html', 'app.html']) {
   const h = baca(html);
   if (!/http-equiv="Content-Security-Policy"/.test(h)) ralat.push(`${html}: tiada CSP`);
   if (/<script(?![^>]*\bsrc=)[^>]*>/i.test(h)) ralat.push(`${html}: skrip sebaris ditemui`);

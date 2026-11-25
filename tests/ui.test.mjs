@@ -62,42 +62,37 @@ async function halamanBaru(t) {
 
 const panggilan = (page) => page.evaluate(() => window.__PALSU.panggilan);
 
-test('log masuk sekolah dengan kod emel dan isi maklumbalas', async (t) => {
+test('log masuk sekolah dengan emel sahaja dan isi maklumbalas', async (t) => {
   const page = await halamanBaru(t);
   if (!page) return;
   await page.goto(`${ASAL}/index.html`);
 
   // Emel tidak sah
   await page.fill('#emelSekolah', 'bukan-emel');
-  await page.click('#btnHantarKod');
+  await page.click('#btnLogMasukSekolah');
   await page.waitForSelector('#mesej:not([hidden])');
   assert.match(await page.textContent('#mesej'), /emel rasmi sekolah yang sah/);
 
   // Emel tidak berdaftar
   await page.fill('#emelSekolah', 'orang@luar.com');
-  await page.click('#btnHantarKod');
+  await page.click('#btnLogMasukSekolah');
   await page.waitForFunction(() => /tidak didaftarkan/.test(document.querySelector('#mesej').textContent));
+  assert.equal(await page.isEnabled('#btnLogMasukSekolah'), true);
 
-  // Emel berdaftar -> kod
+  // Emel berdaftar -> terus ke aplikasi
   await page.fill('#emelSekolah', '  YBA0001@moe.edu.my ');
-  await page.click('#btnHantarKod');
-  await page.waitForSelector('#borangKodSekolah:not([hidden])');
+  await Promise.all([page.waitForURL('**/app.html'), page.click('#btnLogMasukSekolah')]);
   const p1 = await panggilan(page);
-  assert.ok(p1.some((x) => x.jenis === 'fn' && x.nama === 'sediakan-akaun' && x.body.emel === 'yba0001@moe.edu.my'));
-  assert.ok(p1.some((x) => x.op === 'signInWithOtp' && x.options.shouldCreateUser === false));
-
-  await page.fill('#kodOtp', '000000');
-  await page.click('#btnSahkanKod');
-  await page.waitForFunction(() => /tidak sah atau telah tamat/.test(document.querySelector('#mesej').textContent));
-
-  await page.fill('#kodOtp', '123456');
-  await Promise.all([page.waitForURL('**/app.html'), page.click('#btnSahkanKod')]);
+  assert.ok(p1.some((x) => x.jenis === 'fn' && x.nama === 'sediakan-akaun'
+    && x.body.tindakan === 'log-masuk-sekolah' && x.body.emel === 'yba0001@moe.edu.my'));
+  assert.ok(p1.some((x) => x.op === 'verifyOtp' && x.token_hash === 'hash:yba0001@moe.edu.my' && x.type === 'email'));
 
   // Aplikasi: paparan sekolah
   await page.waitForSelector('#utama:not([hidden])');
   assert.equal(await page.textContent('#penggunaNama'), 'SK Limbang');
   assert.equal(await page.isVisible('#navTab'), false, 'tab pentadbir tidak dipaparkan kepada sekolah');
   assert.equal(await page.isVisible('#btnRekodBaru'), false);
+  assert.equal(await page.isVisible('#btnKataLaluanSaya'), false, 'sekolah tiada kata laluan');
   await page.waitForSelector('#senaraiRekod article');
   const kad = await page.innerHTML('#senaraiRekod');
   assert.ok(kad.includes('&lt;script&gt;'), 'teks dapatan di-escape');
@@ -261,51 +256,76 @@ test('pentadbir: log masuk kata laluan, CRUD rekod, cetak, eksport dan pengurusa
   assert.deepEqual(page.ralat, []);
 });
 
-test('pentadbir yang log masuk dengan OTP ditolak; tanpa sesi dihantar ke log masuk', async (t) => {
+test('emel pentadbir atau sekolah tidak aktif ditolak di tab sekolah; tanpa sesi dihantar ke log masuk', async (t) => {
   const page = await halamanBaru(t);
   if (!page) return;
   await page.goto(`${ASAL}/app.html`);
   await page.waitForURL('**/index.html');
 
   await page.fill('#emelSekolah', 'pentadbir@moe.gov.my');
-  await page.click('#btnHantarKod');
-  await page.fill('#kodOtp', '123456');
-  await page.click('#btnSahkanKod');
-  await page.waitForFunction(() => /akaun pentadbir/.test(document.querySelector('#mesej').textContent));
+  await page.click('#btnLogMasukSekolah');
+  await page.waitForFunction(() => /tidak didaftarkan/.test(document.querySelector('#mesej').textContent));
   assert.ok(page.url().endsWith('/index.html'));
+  assert.ok(!(await panggilan(page)).some((x) => x.op === 'verifyOtp'), 'tiada sesi dicipta untuk emel pentadbir');
 
-  // Lupa kata laluan
-  await page.click('#tabAdmin');
-  await page.click('#btnLupa');
-  await page.fill('#emelLupa', 'pentadbir@moe.gov.my');
-  await page.click('#btnHantarPautan');
-  await page.waitForFunction(() => /pautan untuk menetapkan kata laluan/.test(document.querySelector('#mesej').textContent));
-  const reset = (await panggilan(page)).find((x) => x.op === 'reset');
-  assert.equal(reset.opsyen.redirectTo, `${ASAL}/kata-laluan.html`);
+  await page.evaluate(() => { window.__PALSU.db.sekolah[0].aktif = false; });
+  await page.fill('#emelSekolah', 'yba0001@moe.edu.my');
+  await page.click('#btnLogMasukSekolah');
+  await page.waitForFunction(() => /dinyahaktifkan/.test(document.querySelector('#mesej').textContent));
+  assert.ok(page.url().endsWith('/index.html'));
   assert.deepEqual(page.ralat, []);
 });
 
-test('halaman kata laluan menolak pautan tidak sah dan menyemak kekuatan', async (t) => {
+test('pentadbir menetapkan kata laluan sendiri dan pentadbir lain; log audit memaparkan log masuk', async (t) => {
   const page = await halamanBaru(t);
   if (!page) return;
-  await page.goto(`${ASAL}/kata-laluan.html#error=access_denied&error_code=otp_expired`);
-  await page.waitForFunction(() => /tamat tempoh/.test(document.querySelector('#mesej').textContent));
-  assert.equal(await page.isVisible('#borang'), false);
+  await page.goto(`${ASAL}/index.html?tab=admin`);
+  await page.waitForSelector('#panelAdmin:not([hidden])');
+  await page.fill('#emelAdmin', 'pentadbir@moe.gov.my');
+  await page.fill('#kataLaluan', 'KataLaluan123');
+  await Promise.all([page.waitForURL('**/app.html'), page.click('#btnLogMasukAdmin')]);
+  await page.waitForSelector('#btnKataLaluanSaya:not([hidden])');
+  await page.evaluate(() => {
+    window.__PALSU.db.pentadbir.push({ emel: 'pegawai2@moe.gov.my', nama: 'Pegawai Dua', aktif: true, dicipta_pada: '2026-11-02T00:00:00Z' });
+    window.__PALSU.db.log_audit.unshift({ id: 2, pada: '2026-11-21T01:00:00Z', emel: 'yba0001@moe.edu.my', jadual: 'auth',
+      tindakan: 'LOG MASUK', data_lama: null, data_baru: { sekolah: 'SK Limbang', ip: '203.0.113.5' } });
+  });
 
-  await page.evaluate(() => sessionStorage.setItem('palsu-keadaan', JSON.stringify({
-    sesi: { access_token: 'x', user: { id: 'u-admin', email: 'pentadbir@moe.gov.my' } }, profil: null,
-  })));
-  await page.goto(`${ASAL}/kata-laluan.html?muat=2#access_token=x&type=recovery`);
-  await page.waitForSelector('#borang:not([hidden])');
-  await page.fill('#kataLaluan', 'pendek');
-  await page.click('#btnSimpan');
-  assert.match(await page.textContent('#mesej'), /12 aksara/);
-  await page.fill('#kataLaluan', 'KataLaluanKuat2026');
-  await page.fill('#sahkanKataLaluan', 'KataLaluanLain2026');
-  await page.click('#btnSimpan');
-  assert.match(await page.textContent('#mesej'), /tidak sepadan/);
-  await page.fill('#sahkanKataLaluan', 'KataLaluanKuat2026');
-  await Promise.all([page.waitForURL('**/index.html?tab=admin&sebab=kata-laluan'), page.click('#btnSimpan')]);
-  await page.waitForFunction(() => /berjaya ditetapkan/.test(document.querySelector('#mesej').textContent));
+  // Tukar kata laluan sendiri
+  await page.click('#btnKataLaluanSaya');
+  await page.waitForSelector('#dialogKataLaluan[open]');
+  assert.match(await page.textContent('#sasaranKataLaluan'), /pentadbir@moe\.gov\.my/);
+  await page.fill('#klBaharu', 'pendek');
+  await page.click('#btnSimpanKataLaluan');
+  assert.match(await page.textContent('#mesejKataLaluan'), /12 aksara/);
+  await page.fill('#klBaharu', 'tiadahurufbesar123');
+  await page.click('#btnSimpanKataLaluan');
+  assert.match(await page.textContent('#mesejKataLaluan'), /huruf besar/);
+  await page.fill('#klBaharu', 'KataLaluanKuat2026');
+  await page.fill('#klSahkan', 'KataLaluanLain2026');
+  await page.click('#btnSimpanKataLaluan');
+  assert.match(await page.textContent('#mesejKataLaluan'), /tidak sepadan/);
+  await page.fill('#klSahkan', 'KataLaluanKuat2026');
+  await page.click('#btnSimpanKataLaluan');
+  await page.waitForSelector('#dialogKataLaluan', { state: 'hidden' });
+  await page.waitForFunction(() => [...document.querySelectorAll('.toast-berjaya')].some((x) => /anda telah ditukar/.test(x.textContent)));
+  assert.equal(await page.evaluate(() => window.__PALSU.kataLaluan['pentadbir@moe.gov.my']), 'KataLaluanKuat2026');
+  assert.equal(await page.inputValue('#klBaharu'), '', 'medan dikosongkan selepas ditutup');
+
+  // Tetapkan kata laluan pentadbir lain dari tab Pentadbir
+  await page.click('#navTab [data-paparan="pentadbir"]');
+  await page.click('#jadualPentadbir tr:has-text("Pegawai Dua") [data-tindakan="kata-laluan"]');
+  await page.waitForSelector('#dialogKataLaluan[open]');
+  assert.match(await page.textContent('#tajukKataLaluan'), /Tetapkan kata laluan pentadbir/);
+  await page.fill('#klBaharu', 'PegawaiDua2026x');
+  await page.fill('#klSahkan', 'PegawaiDua2026x');
+  await page.click('#btnSimpanKataLaluan');
+  await page.waitForFunction(() => [...document.querySelectorAll('.toast-berjaya')].some((x) => /pegawai2@moe\.gov\.my telah ditetapkan/.test(x.textContent)));
+  const fn = (await panggilan(page)).filter((x) => x.body?.tindakan === 'tetap-kata-laluan').map((x) => x.body.emel);
+  assert.deepEqual(fn, ['pentadbir@moe.gov.my', 'pegawai2@moe.gov.my']);
+
+  // Log audit memaparkan log masuk sekolah
+  await page.click('#navTab [data-paparan="audit"]');
+  await page.waitForFunction(() => /Akaun — Log masuk sekolah[\s\S]*SK Limbang · IP 203\.0\.113\.5/.test(document.querySelector('#jadualAudit').textContent));
   assert.deepEqual(page.ralat, []);
 });

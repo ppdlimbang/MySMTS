@@ -1,8 +1,8 @@
-import { sb, konfigSah, dapatkanProfil, BALDI, KONFIG } from './klien.js';
+import { sb, konfigSah, dapatkanProfil, tetapKataLaluanPentadbir, BALDI, KONFIG } from './klien.js';
 import {
   $, $$, esc, formatTarikh, formatMasa, formatCapMasa, tarikhHariIni, masaSekarang, STATUS, kelasStatus,
   toast, mesejRalat, setSibuk, paparMesej, mampatGambar, muatTurun, selCsv, sahkan, bersihCarian,
-  EMEL_SAH, normalEmel, IKON_LOGO,
+  EMEL_SAH, normalEmel, IKON_LOGO, semakKekuatanKataLaluan,
 } from './util.js';
 
 const SAIZ_HALAMAN = 20;
@@ -208,6 +208,16 @@ function pasangPeristiwa() {
   $('#btnPentadbirBaru').addEventListener('click', () => bukaBorangPentadbir(null));
   $('#jadualPentadbir').addEventListener('click', klikJadualPentadbir);
   $('#borangPentadbir').addEventListener('submit', simpanPentadbir);
+
+  // Kata laluan pentadbir
+  $('#btnKataLaluanSaya').addEventListener('click', () => bukaBorangKataLaluan({
+    emel: keadaan.profil.emel, nama: keadaan.profil.nama,
+  }));
+  $('#borangKataLaluan').addEventListener('submit', simpanKataLaluan);
+  $('#dialogKataLaluan').addEventListener('close', () => {
+    $('#klBaharu').value = '';
+    $('#klSahkan').value = '';
+  });
 
   // Audit
   $('#btnMuatSemulaAudit').addEventListener('click', () => muatAudit(true));
@@ -1048,6 +1058,7 @@ async function muatPentadbir() {
         <td>${esc(formatCapMasa(p.dicipta_pada))}</td>
         <td><div class="tindakan-sel">
           <button type="button" class="btn btn-garis btn-kecil" data-tindakan="edit" data-emel="${esc(p.emel)}">Kemaskini</button>
+          <button type="button" class="btn btn-garis btn-kecil" data-tindakan="kata-laluan" data-emel="${esc(p.emel)}">Kata laluan</button>
           ${diri ? '' : `<button type="button" class="btn btn-garis btn-kecil" data-tindakan="togol" data-emel="${esc(p.emel)}">${p.aktif ? 'Nyahaktif' : 'Aktifkan'}</button>
           <button type="button" class="btn btn-bahaya-garis btn-kecil" data-tindakan="padam" data-emel="${esc(p.emel)}">Padam</button>`}
         </div></td>
@@ -1089,7 +1100,7 @@ async function simpanPentadbir(e) {
     $('#dialogPentadbir').close();
     toast(pentadbirDiedit
       ? 'Maklumat pentadbir dikemas kini.'
-      : 'Pentadbir ditambah. Minta mereka menetapkan kata laluan melalui "Tetapkan / lupa kata laluan?" di halaman log masuk.',
+      : 'Pentadbir ditambah. Klik "Kata laluan" pada baris mereka untuk menetapkan kata laluan pertama, kemudian maklumkan kepada mereka secara peribadi.',
     'berjaya', pentadbirDiedit ? 4500 : 9000);
     await muatPentadbir();
   } catch (err) {
@@ -1106,6 +1117,10 @@ async function klikJadualPentadbir(e) {
   if (!p) return;
   if (b.dataset.tindakan === 'edit') {
     bukaBorangPentadbir(p);
+    return;
+  }
+  if (b.dataset.tindakan === 'kata-laluan') {
+    bukaBorangKataLaluan(p);
     return;
   }
   if (p.emel === keadaan.profil.emel) return;
@@ -1137,11 +1152,63 @@ async function klikJadualPentadbir(e) {
 }
 
 // =====================================================================
+// Kata laluan pentadbir (tiada emel dihantar; ditetapkan oleh pentadbir)
+// =====================================================================
+
+let sasaranKataLaluan = null;
+
+function bukaBorangKataLaluan(p) {
+  sasaranKataLaluan = p.emel;
+  const diri = p.emel === keadaan.profil.emel;
+  paparMesej($('#mesejKataLaluan'), '');
+  $('#tajukKataLaluan').textContent = diri ? 'Tukar kata laluan saya' : 'Tetapkan kata laluan pentadbir';
+  $('#sasaranKataLaluan').textContent = p.nama ? `${p.nama} (${p.emel})` : p.emel;
+  $('#klNamaPengguna').value = p.emel;
+  $('#klBaharu').value = '';
+  $('#klSahkan').value = '';
+  $('#dialogKataLaluan').showModal();
+  $('#klBaharu').focus();
+}
+
+async function simpanKataLaluan(e) {
+  e.preventDefault();
+  const m = $('#mesejKataLaluan');
+  const baharu = $('#klBaharu').value;
+  const masalah = semakKekuatanKataLaluan(baharu);
+  if (masalah) {
+    paparMesej(m, masalah);
+    $('#klBaharu').focus();
+    return;
+  }
+  if (baharu !== $('#klSahkan').value) {
+    paparMesej(m, 'Pengesahan kata laluan tidak sepadan.');
+    $('#klSahkan').focus();
+    return;
+  }
+  const btn = $('#btnSimpanKataLaluan');
+  setSibuk(btn, true, 'Menyimpan…');
+  try {
+    await tetapKataLaluanPentadbir(sasaranKataLaluan, baharu);
+    $('#dialogKataLaluan').close();
+    toast(sasaranKataLaluan === keadaan.profil.emel
+      ? 'Kata laluan anda telah ditukar.'
+      : `Kata laluan untuk ${sasaranKataLaluan} telah ditetapkan. Maklumkan kepada pentadbir tersebut secara peribadi.`,
+    'berjaya', 7000);
+  } catch (err) {
+    paparMesej(m, mesejRalat(err));
+  } finally {
+    setSibuk(btn, false);
+  }
+}
+
+// =====================================================================
 // Log audit
 // =====================================================================
 
-const LABEL_JADUAL = { rekod_lawatan: 'Rekod lawatan', sekolah: 'Sekolah', pentadbir: 'Pentadbir', lampiran: 'Gambar' };
-const LABEL_TINDAKAN = { INSERT: 'Tambah', UPDATE: 'Kemaskini', DELETE: 'Padam' };
+const LABEL_JADUAL = { rekod_lawatan: 'Rekod lawatan', sekolah: 'Sekolah', pentadbir: 'Pentadbir', lampiran: 'Gambar', auth: 'Akaun' };
+const LABEL_TINDAKAN = {
+  INSERT: 'Tambah', UPDATE: 'Kemaskini', DELETE: 'Padam', 'LOG MASUK': 'Log masuk sekolah', 'TETAP KATA LALUAN': 'Tetapkan kata laluan',
+};
 const LABEL_MEDAN = {
   sekolah_id: 'sekolah', tarikh: 'tarikh', masa: 'masa', nama_pegawai: 'nama pegawai', jawatan: 'jawatan',
   dapatan: 'dapatan', maklumbalas: 'maklumbalas', status: 'status', nama: 'nama', kod: 'kod', emel: 'emel', aktif: 'status aktif',
@@ -1155,6 +1222,8 @@ function ringkasanAudit(a) {
   else if (a.jadual === 'sekolah') asas = d.nama || '';
   else if (a.jadual === 'pentadbir') asas = `${d.nama || ''} (${d.emel || ''})`;
   else if (a.jadual === 'lampiran') asas = `Gambar ${d.jenis || ''}`;
+  else if (a.tindakan === 'LOG MASUK') asas = `${d.sekolah || ''}${d.ip ? ` · IP ${d.ip}` : ''}`;
+  else if (a.tindakan === 'TETAP KATA LALUAN') asas = `untuk ${d.sasaran || ''}`;
   if (a.tindakan === 'UPDATE' && a.data_lama && a.data_baru) {
     const diubah = Object.keys(a.data_baru)
       .filter((k) => !MEDAN_ABAI.has(k) && JSON.stringify(a.data_baru[k]) !== JSON.stringify(a.data_lama[k]))

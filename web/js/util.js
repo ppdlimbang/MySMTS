@@ -85,6 +85,7 @@ export function toast(mesej, jenis = 'info', tempoh = 4500) {
 /** Tukar ralat Supabase/rangkaian kepada mesej Bahasa Melayu yang jelas. */
 export function mesejRalat(ralat, lalai = 'Ralat tidak dijangka berlaku. Sila cuba lagi.') {
   if (!ralat) return lalai;
+  if (ralat.mesra) return ralat.message;
   const kod = ralat.code || ralat.error_code || '';
   const mesej = String(ralat.message || ralat.error_description || ralat || '');
   const status = ralat.status;
@@ -94,8 +95,8 @@ export function mesejRalat(ralat, lalai = 'Ralat tidak dijangka berlaku. Sila cu
   }
   switch (kod) {
     case 'invalid_credentials': return 'Emel atau kata laluan tidak sah.';
-    case 'email_not_confirmed': return 'Emel belum disahkan. Sila semak peti masuk emel anda.';
-    case 'otp_expired': return 'Kod tidak sah atau telah tamat tempoh. Minta kod baharu.';
+    case 'email_not_confirmed': return 'Akaun ini belum disediakan. Hubungi pentadbir PPD.';
+    case 'otp_expired': return 'Sesi log masuk tidak sah atau telah tamat tempoh. Sila cuba log masuk semula.';
     case 'otp_disabled':
     case 'signup_disabled':
     case 'user_not_found': return 'Emel ini tidak didaftarkan dalam sistem. Hubungi pentadbir PPD.';
@@ -270,3 +271,13 @@ export function bersihCarian(teks) {
 }
 
 export const IKON_LOGO = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21h18"/><path d="M5 21V10l7-5 7 5v11"/><path d="M9 21v-6h6v6"/><path d="M12 5V2.5l3 1.2-3 1.3"/></svg>`;
+
+/** Semak kekuatan kata laluan pentadbir. Pulangkan mesej masalah, atau '' jika sah. */
+export function semakKekuatanKataLaluan(k) {
+  if (k.length < 12) return 'Kata laluan mesti sekurang-kurangnya 12 aksara.';
+  if (k.length > 72) return 'Kata laluan terlalu panjang (maksimum 72 aksara).';
+  if (!/[a-z]/.test(k) || !/[A-Z]/.test(k) || !/\d/.test(k)) {
+    return 'Kata laluan mesti mengandungi huruf besar, huruf kecil dan nombor.';
+  }
+  return '';
+}

@@ -20,7 +20,7 @@ export const sb = konfigSah
       auth: {
         persistSession: true,
         autoRefreshToken: true,
-        detectSessionInUrl: true,
+        detectSessionInUrl: false,
         flowType: 'implicit',
         storageKey: 'mysmts-sesi',
       },
@@ -35,15 +35,31 @@ export async function dapatkanProfil() {
   return data;
 }
 
-/**
- * Pastikan akaun pengesahan wujud untuk emel yang didaftarkan oleh pentadbir.
- * Kegagalan diabaikan secara senyap: langkah seterusnya (OTP / set semula)
- * akan melaporkan ralat yang sesuai.
- */
-export async function sediakanAkaun(emel) {
-  try {
-    await sb.functions.invoke('sediakan-akaun', { body: { emel } });
-  } catch (e) {
-    console.warn('sediakan-akaun gagal:', e);
+/** Panggil fungsi Edge "sediakan-akaun"; ralat pelayan dipulangkan sebagai Error mesra. */
+async function panggilFungsi(badan) {
+  const { data, error } = await sb.functions.invoke('sediakan-akaun', { body: badan });
+  if (error) {
+    let teks = '';
+    try { teks = (await error.context?.json())?.ralat || ''; } catch { /* bukan JSON */ }
+    throw Object.assign(new Error(teks || 'Tidak dapat menghubungi pelayan. Semak sambungan internet dan cuba lagi.'), { mesra: true });
   }
+  return data;
+}
+
+/**
+ * Log masuk sekolah menggunakan emel rasmi sahaja. Pelayan menyemak emel
+ * dengan senarai sekolah aktif dan memulangkan token sekali guna.
+ * @returns {Promise<'ok'|'tidak-berdaftar'>}
+ */
+export async function logMasukSekolah(emel) {
+  const data = await panggilFungsi({ tindakan: 'log-masuk-sekolah', emel });
+  if (!data?.ok) return 'tidak-berdaftar';
+  const { error } = await sb.auth.verifyOtp({ token_hash: data.token_hash, type: 'email' });
+  if (error) throw error;
+  return 'ok';
+}
+
+/** Pentadbir menetapkan kata laluan bagi dirinya atau pentadbir lain. */
+export async function tetapKataLaluanPentadbir(emel, kataLaluan) {
+  await panggilFungsi({ tindakan: 'tetap-kata-laluan', emel, kata_laluan: kataLaluan });
 }

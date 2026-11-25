@@ -11,14 +11,16 @@
 | Peranan | Cara log masuk | Akses |
 |---|---|---|
 | **Pentadbir PPD** | Emel rasmi + kata laluan | Cipta, kemas kini dan padam rekod lawatan; urus senarai sekolah dan pentadbir; lihat log audit; eksport CSV |
-| **Sekolah** | Emel rasmi sekolah sahaja. Kod 6 digit dihantar ke emel tersebut (tiada kata laluan) | Lihat rekod sekolah sendiri sahaja; isi maklumbalas, status dan gambar bukti (Bahagian B) |
+| **Sekolah** | Emel rasmi sekolah sahaja (tiada kod, tiada kata laluan) | Lihat rekod sekolah sendiri sahaja; isi maklumbalas, status dan gambar bukti (Bahagian B) |
 
-Hanya emel yang didaftarkan oleh pentadbir boleh log masuk. Pendaftaran awam dimatikan.
+Hanya emel yang didaftarkan oleh pentadbir boleh log masuk. Pendaftaran awam dimatikan. Sistem tidak menghantar emel.
+
+> Oleh kerana sekolah log masuk dengan emel sahaja, sesiapa yang mengetahui emel rasmi sekolah boleh log masuk sebagai sekolah itu. Setiap log masuk sekolah direkodkan dalam Log Audit (masa, IP, pelayar). Kata laluan pentadbir ditetapkan oleh pentadbir lain melalui tab **Pentadbir**.
 
 ## Keselamatan
 
 - Semua kawalan akses dikuatkuasakan dalam pangkalan data melalui **Row Level Security (RLS)**, bukan dalam pelayar. Peranan ditentukan oleh jadual `pentadbir` dan `sekolah`.
-- Akses pentadbir memerlukan sesi yang dibuka **dengan kata laluan**. Emel pentadbir yang log masuk dengan kod emel tidak mendapat akses pentadbir.
+- Akses pentadbir memerlukan sesi yang dibuka **dengan kata laluan**. Emel pentadbir tidak boleh log masuk melalui tab Sekolah.
 - Akaun yang tidak disediakan oleh sistem (cth. didaftar sendiri) tidak diiktiraf walaupun emelnya sepadan.
 - Sekolah hanya boleh mengubah Bahagian B melalui fungsi `hantar_maklumbalas`, dan tidak boleh mengubah dapatan pegawai.
 - Gambar disimpan dalam baldi storan **peribadi** dan dipaparkan melalui URL bertandatangan yang tamat tempoh dalam 1 jam.
@@ -30,14 +32,13 @@ Hanya emel yang didaftarkan oleh pentadbir boleh log masuk. Pendaftaran awam dim
 
 ```
 web/                         Laman yang diterbitkan ke GitHub Pages
-  index.html                 Log masuk (sekolah: kod emel, pentadbir: kata laluan)
+  index.html                 Log masuk (sekolah: emel sahaja, pentadbir: kata laluan)
   app.html                   Aplikasi utama (rekod, sekolah, pentadbir, log audit)
-  kata-laluan.html           Tetapkan / set semula kata laluan pentadbir
   js/  css/  img/  vendor/
   config.example.js          Templat konfigurasi (config.js dijana semasa deploy)
 supabase/
   migrations/                Skema, RLS, storan, audit, senarai awal sekolah
-  functions/sediakan-akaun/  Fungsi Edge: sediakan akaun bagi emel yang dibenarkan
+  functions/sediakan-akaun/  Fungsi Edge: log masuk sekolah (emel sahaja) dan kata laluan pentadbir
 tests/                       Ujian keselamatan pangkalan data dan ujian antara muka
 .github/workflows/           Uji, kemudian terbit ke GitHub Pages
 ```
@@ -59,4 +60,3 @@ cp web/config.example.js web/config.js   # isi URL dan kunci anon projek
 npm run serve                            # http://localhost:8080
 ```
 
-Tambah `http://localhost:8080/kata-laluan.html` dalam *Redirect URLs* Supabase jika ingin menguji aliran kata laluan secara setempat.

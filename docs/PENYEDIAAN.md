@@ -1,6 +1,10 @@
 # Panduan Penyediaan Produksi MySMTS
 
-Ikut langkah ini mengikut urutan. Anggaran masa: 45–60 minit.
+Ikut langkah ini mengikut urutan. Anggaran masa: 30–45 minit.
+
+> **Model log masuk:** sekolah log masuk dengan **emel rasmi sahaja** (tiada kod, tiada kata laluan). Pentadbir log masuk dengan **emel + kata laluan**. Sistem **tidak menghantar sebarang emel**, jadi SMTP tidak diperlukan.
+>
+> **Risiko yang diterima:** sesiapa yang mengetahui emel rasmi sebuah sekolah boleh log masuk sebagai sekolah itu (melihat rekodnya dan mengisi Bahagian B). Mereka tidak boleh melihat sekolah lain atau mengubah dapatan pegawai. Setiap log masuk sekolah direkodkan dalam **Log Audit** (masa, IP, pelayar) supaya penyalahgunaan dapat dikesan.
 
 Nilai contoh yang digunakan dalam panduan ini:
 
@@ -34,111 +38,60 @@ supabase db push
 
 ## 3. Daftar pentadbir pertama
 
-Di **SQL Editor**, jalankan arahan berikut. Gantikan emel dan nama dengan maklumat pentadbir sebenar:
+Pentadbir pertama perlu disediakan sekali sahaja melalui papan pemuka Supabase, kerana sistem tidak menghantar emel.
 
-```sql
-insert into public.pentadbir (emel, nama)
-values ('nama.pegawai@moe.gov.my', 'Nama Penuh Pegawai');
-```
+1. **SQL Editor**: daftarkan emel dan nama pentadbir.
 
-Pentadbir seterusnya boleh ditambah melalui tab **Pentadbir** dalam aplikasi.
+   ```sql
+   insert into public.pentadbir (emel, nama)
+   values ('nama.pegawai@moe.gov.my', 'Nama Penuh Pegawai');
+   ```
+
+2. **Authentication → Users → Add user → Create new user**: isi emel yang sama dan kata laluan (sekurang-kurangnya 12 aksara, dengan huruf besar, huruf kecil dan nombor). Tandakan **Auto Confirm User**.
+
+3. **SQL Editor**: tandakan akaun itu sebagai akaun yang disediakan oleh sistem. Tanpa langkah ini, akaun tidak diiktiraf.
+
+   ```sql
+   update auth.users
+   set raw_app_meta_data = coalesce(raw_app_meta_data, '{}'::jsonb) || '{"mysmts":"disediakan"}'::jsonb
+   where lower(email) = 'nama.pegawai@moe.gov.my' and email_confirmed_at is not null;
+   ```
+
+Pentadbir seterusnya ditambah melalui tab **Pentadbir** dalam aplikasi, dan kata laluan mereka ditetapkan dengan butang **Kata laluan** pada baris mereka.
 
 ## 4. Terbitkan fungsi Edge `sediakan-akaun`
 
-Fungsi ini mencipta akaun log masuk **hanya** untuk emel yang didaftarkan dalam jadual `sekolah` atau `pentadbir`.
-
-**Pilihan A: papan pemuka**
-
-1. Pergi ke **Edge Functions** → **Deploy a new function** → **Via Editor**.
-2. Namakan fungsi `sediakan-akaun` (ejaan mesti tepat).
-3. Tampal kandungan fail `supabase/functions/sediakan-akaun/index.ts`, kemudian klik **Deploy**.
-4. Buka **Details** fungsi tersebut dan **matikan "Enforce JWT Verification" / "Verify JWT"**. Fungsi ini dipanggil sebelum pengguna log masuk.
-
-**Pilihan B: CLI**
+Fungsi ini (a) membenarkan sekolah aktif log masuk dengan emel sahaja dan merekodkan log masuk itu, dan (b) membenarkan pentadbir menetapkan kata laluan pentadbir. Ia menggunakan kunci rahsia pelayan yang tidak pernah sampai ke pelayar.
 
 ```bash
-supabase functions deploy sediakan-akaun --no-verify-jwt
+npx supabase login
+npx supabase functions deploy sediakan-akaun --remote=<ref-projek> --no-verify-jwt --use-api
+npx supabase secrets set ALLOWED_ORIGINS=https://ppdlimbang.github.io --remote=<ref-projek>
 ```
 
-**Rahsia fungsi** (Edge Functions → **Secrets**):
+Jika menggunakan papan pemuka, namakan fungsi tepat `sediakan-akaun` dan **matikan "Verify JWT"** dalam tab **Settings** fungsi itu.
 
-| Nama | Nilai | Wajib? |
-|---|---|---|
-| `ALLOWED_ORIGINS` | `https://ppdlimbang.github.io` | Disyorkan |
-| `MYSMTS_SECRET_KEY` | Kunci `sb_secret_...` | Hanya jika kunci *service_role* lama telah dimatikan |
-
-`SUPABASE_URL` dan `SUPABASE_SERVICE_ROLE_KEY` disediakan secara automatik oleh Supabase.
+`SUPABASE_URL`, `SUPABASE_ANON_KEY` dan `SUPABASE_SERVICE_ROLE_KEY` disediakan secara automatik oleh Supabase. Tetapkan `MYSMTS_SECRET_KEY` (kunci `sb_secret_...`) hanya jika kunci *service_role* lama telah dimatikan.
 
 ## 5. Tetapan pengesahan (Authentication)
 
-### 5.1 Penyedia dan pendaftaran
+Tetapan ini disimpan dalam `supabase/config.toml` dan ditolak dengan:
 
-Pergi ke **Authentication** → **Sign In / Providers**:
+```bash
+npx supabase config diff --remote=<ref-projek>
+npx supabase config push --remote=<ref-projek>
+```
 
-- **Allow new users to sign up:** **MATI**. Ini wajib. Akaun hanya dicipta oleh fungsi `sediakan-akaun`.
+Hasilnya (boleh disemak di **Authentication → Sign In / Providers** dan **URL Configuration**):
+
+- **Allow new users to sign up:** MATI (wajib). Akaun hanya dicipta oleh fungsi `sediakan-akaun`.
 - **Allow anonymous sign-ins:** MATI
-- **Email** provider: HIDUP
-  - **Confirm email:** HIDUP
-  - **Secure email change:** HIDUP
-  - **Email OTP Expiration:** `600` saat (10 minit)
-  - **Email OTP Length:** `6`
-- Semua penyedia lain (Google, Phone dan sebagainya): MATI
-
-### 5.2 Kata laluan
-
-Pergi ke **Authentication** → **Policies** / **Password security**:
-
-- **Minimum password length:** `12`
-- **Password requirements:** huruf kecil, huruf besar dan digit
-- **Leaked password protection:** HIDUP (pelan Pro)
-
-### 5.3 URL
-
-Pergi ke **Authentication** → **URL Configuration**:
-
+- **Email** provider: HIDUP (diperlukan untuk log masuk kata laluan dan token sekolah)
+- **Phone** dan penyedia lain: MATI
+- **Minimum password length:** 12, dengan huruf besar, huruf kecil dan digit
 - **Site URL:** `https://ppdlimbang.github.io/MySMTS/`
-- **Redirect URLs:** tambah `https://ppdlimbang.github.io/MySMTS/kata-laluan.html`
 
-### 5.4 SMTP: wajib untuk produksi
-
-Pelayan emel lalai Supabase hanya menghantar emel kepada **ahli pasukan projek**, dan terhad kepada beberapa emel sejam. Emel sekolah **tidak akan menerima kod** sehingga SMTP sendiri dikonfigurasi.
-
-Pergi ke **Authentication** → **Emails** → **SMTP Settings**, hidupkan **Custom SMTP**, kemudian isi butiran pembekal emel. Contoh pembekal: pelayan SMTP jabatan, Amazon SES, Brevo atau Resend.
-
-- **Sender email:** contohnya `no-reply@domain-anda`
-- **Sender name:** `MySMTS PPD Limbang`
-
-Selepas itu, semak had kadar di **Authentication** → **Rate Limits**. Tetapkan *Rate limit for sending emails* supaya mencukupi untuk semua sekolah, contohnya 100 sejam.
-
-### 5.5 Templat emel
-
-Pergi ke **Authentication** → **Emails** → **Templates**.
-
-**Magic Link** (digunakan untuk kod log masuk sekolah). Templat ini mesti mengandungi `{{ .Token }}`:
-
-- Subjek: `Kod log masuk MySMTS`
-- Kandungan:
-
-```html
-<h2>Kod log masuk MySMTS</h2>
-<p>Gunakan kod berikut untuk log masuk ke Sistem Maklumbalas &amp; Tindakan Sekolah PPD Limbang:</p>
-<p style="font-size:28px;font-weight:bold;letter-spacing:6px">{{ .Token }}</p>
-<p>Kod ini sah selama 10 minit. Jangan kongsi kod ini dengan sesiapa, termasuk pegawai PPD.</p>
-<p>Jika anda tidak meminta kod ini, abaikan emel ini.</p>
-```
-
-**Reset Password** (digunakan untuk menetapkan kata laluan pentadbir):
-
-- Subjek: `Tetapkan kata laluan MySMTS`
-- Kandungan:
-
-```html
-<h2>Tetapkan kata laluan pentadbir MySMTS</h2>
-<p>Klik pautan di bawah untuk menetapkan kata laluan anda:</p>
-<p><a href="{{ .ConfirmationURL }}">Tetapkan kata laluan</a></p>
-<p>Pautan ini sah untuk tempoh terhad dan hanya boleh digunakan sekali.</p>
-<p>Jika anda tidak meminta pautan ini, abaikan emel ini.</p>
-```
+**SMTP dan templat emel tidak diperlukan**, kerana sistem tidak menghantar emel.
 
 ## 6. Sediakan GitHub Pages
 
@@ -158,24 +111,19 @@ Pergi ke **Authentication** → **Emails** → **Templates**.
 
 ## 7. Log masuk kali pertama
 
-1. Buka `https://ppdlimbang.github.io/MySMTS/` dan pilih tab **Pentadbir PPD**.
-2. Klik **Tetapkan / lupa kata laluan?**, masukkan emel pentadbir dari langkah 3, kemudian klik **Hantar pautan**.
-3. Buka emel, klik pautan, dan tetapkan kata laluan (sekurang-kurangnya 12 aksara).
-4. Log masuk menggunakan emel dan kata laluan tersebut.
-5. Pergi ke tab **Sekolah** dan isi **emel rasmi** serta **kod** bagi setiap sekolah. Sekolah tanpa emel tidak boleh log masuk.
-
-Sekolah boleh log masuk dengan memilih tab **Sekolah**, memasukkan emel rasmi sekolah, dan memasukkan kod 6 digit yang diterima melalui emel.
+1. Buka `https://ppdlimbang.github.io/MySMTS/`, pilih tab **Pentadbir PPD**, dan log masuk dengan emel serta kata laluan dari langkah 3.
+2. Pergi ke tab **Sekolah** dan isi **emel rasmi** serta **kod** bagi setiap sekolah. Sekolah tanpa emel tidak boleh log masuk.
+3. Uji dengan satu sekolah: log keluar, pilih tab **Sekolah**, masukkan emel sekolah itu dan klik **Log masuk sekolah**.
+4. Semak tab **Log Audit**: log masuk tersebut sepatutnya dipaparkan bersama alamat IP.
 
 ## 8. Senarai semak sebelum digunakan
 
 - [ ] Pendaftaran awam (**Allow new users to sign up**) dimatikan
-- [ ] Custom SMTP dikonfigurasi, dan kod log masuk diterima di peti emel sekolah ujian
-- [ ] Templat **Magic Link** mengandungi `{{ .Token }}`
 - [ ] Fungsi `sediakan-akaun` diterbitkan dengan **Verify JWT dimatikan**
-- [ ] **Site URL** dan **Redirect URLs** ditetapkan kepada URL GitHub Pages
 - [ ] Pembolehubah `SUPABASE_URL` dan `SUPABASE_ANON_KEY` ditetapkan di GitHub, dan aliran kerja lulus
 - [ ] Ujian sebenar dengan dua sekolah: sekolah A tidak dapat melihat rekod sekolah B
-- [ ] Pentadbir yang log masuk melalui tab Sekolah (kod emel) ditolak
+- [ ] Emel pentadbir yang dimasukkan di tab Sekolah ditolak
+- [ ] Log masuk sekolah muncul dalam **Log Audit**
 - [ ] Pelan Pro diaktifkan (sandaran harian, tiada jeda), atau pelan sandaran alternatif telah dipersetujui
 
 ## 9. Operasi harian
@@ -183,8 +131,10 @@ Sekolah boleh log masuk dengan memilih tab **Sekolah**, memasukkan emel rasmi se
 - **Sekolah baharu atau emel sekolah bertukar:** kemas kini di tab **Sekolah**. Akses mengikut emel baharu berkuat kuasa serta-merta.
 - **Sekolah tidak lagi digunakan:** klik **Nyahaktif**. Rekod dikekalkan dan akses ditarik balik serta-merta.
 - **Pentadbir bertukar jawatan:** nyahaktifkan atau padam di tab **Pentadbir**. Sistem sentiasa mengekalkan sekurang-kurangnya seorang pentadbir aktif.
+- **Pentadbir lupa kata laluan:** pentadbir lain klik **Kata laluan** pada baris mereka di tab **Pentadbir**. Jika tiada pentadbir lain, ulang langkah 3 (bahagian Add user) di papan pemuka Supabase.
+- **Disyaki penyalahgunaan log masuk sekolah:** semak tab **Log Audit** (Akaun — Log masuk sekolah). Nyahaktifkan sekolah tersebut serta-merta jika perlu.
 - **Laporan:** gunakan **Eksport CSV**, yang mengikut penapis semasa, atau **Cetak A4** bagi setiap rekod.
-- **Siasatan:** tab **Log Audit** menunjukkan siapa mengubah apa dan bila.
+- **Siasatan:** tab **Log Audit** menunjukkan siapa mengubah apa dan bila, serta setiap log masuk sekolah dan penetapan kata laluan.
 
 ## 10. Kemas kini sistem
 
