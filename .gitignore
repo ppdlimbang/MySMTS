@@ -3,6 +3,9 @@
 .env.*
 !.env.example
 
+# Legacy demo with client-side demo credentials
+/sistem_maklumbalas_tindakan_sekolah_ppd_limbang (1).html
+
 # Supabase local state
 supabase/.temp/
 
