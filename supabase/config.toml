@@ -1,0 +1,10 @@
+# Konfigurasi Supabase CLI untuk MySMTS.
+# Tetapan pengesahan (Auth) projek dihos diurus melalui papan pemuka
+# Supabase — lihat docs/PENYEDIAAN.md.
+
+project_id = "mysmts"
+
+[functions.sediakan-akaun]
+# Dipanggil sebelum pengguna log masuk, jadi tiada JWT pengguna.
+# Fungsi ini hanya mencipta akaun untuk emel dalam senarai dibenarkan.
+verify_jwt = false

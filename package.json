@@ -1,0 +1,19 @@
+{
+  "name": "mysmts",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Sistem Maklumbalas dan Tindakan Sekolah (MySMTS) — PPD Limbang",
+  "type": "module",
+  "scripts": {
+    "test": "node --test \"tests/*.test.mjs\"",
+    "semak": "node --test \"tests/*.test.mjs\" && node tests/semak-sintaks.mjs",
+    "serve": "node tests/pelayan-tempatan.mjs"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.6.0",
+    "playwright-core": "1.65.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

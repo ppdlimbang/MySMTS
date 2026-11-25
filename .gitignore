@@ -1,20 +1,22 @@
-# Local secrets and environment files
+# Rahsia dan konfigurasi setempat
 .env
 .env.*
 !.env.example
+web/config.js
 
-# Legacy demo with client-side demo credentials
-/sistem_maklumbalas_tindakan_sekolah_ppd_limbang (1).html
+# Demo lama yang mengandungi kata laluan demo dalam kod
+/sistem_maklum*balas_tindakan_sekolah_ppd_limbang*.html
 
 # Supabase local state
 supabase/.temp/
+supabase/.branches/
 
-# Dependencies and generated output
+# Kebergantungan dan output
 node_modules/
 dist/
 coverage/
 
-# Logs and operating system files
+# Log dan fail sistem operasi
 *.log
 Thumbs.db
 .DS_Store

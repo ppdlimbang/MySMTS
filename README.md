@@ -1,30 +1,62 @@
 # MySMTS
 
-**MySMTS** ialah Sistem Maklumbalas dan Tindakan Sekolah untuk Pejabat Pendidikan Daerah Limbang.
+**MySMTS** ialah Sistem Maklumbalas dan Tindakan Sekolah untuk Pejabat Pendidikan Daerah (PPD) Limbang. Pegawai PPD merekod dapatan lawatan ke sekolah (Bahagian A), dan pihak sekolah menghantar maklumbalas serta bukti tindakan (Bahagian B).
 
-## Status semasa
+- **Hosting:** GitHub Pages (laman statik dalam `web/`)
+- **Pangkalan data, pengesahan dan storan gambar:** Supabase
+- **Panduan penyediaan produksi:** [docs/PENYEDIAAN.md](docs/PENYEDIAAN.md)
 
-Repositori ini memulakan penyediaan sistem untuk produksi. Halaman dalam `halaman/` ialah prototaip statik: data disimpan dalam `localStorage` pelayar dan belum dikongsi antara pengguna. Supabase belum dikonfigurasi. Jangan masukkan data sekolah sebenar atau maklumat peribadi ke dalam prototaip ini.
+## Peranan dan log masuk
 
-Fail HTML demo lama di direktori utama tidak diterbitkan ke Git kerana ia mengandungi kata laluan demo yang ditanam dalam kod. Jangan gunakan log masuk demo itu sebagai kawalan akses.
+| Peranan | Cara log masuk | Akses |
+|---|---|---|
+| **Pentadbir PPD** | Emel rasmi + kata laluan | Cipta, kemas kini dan padam rekod lawatan; urus senarai sekolah dan pentadbir; lihat log audit; eksport CSV |
+| **Sekolah** | Emel rasmi sekolah sahaja. Kod 6 digit dihantar ke emel tersebut (tiada kata laluan) | Lihat rekod sekolah sendiri sahaja; isi maklumbalas, status dan gambar bukti (Bahagian B) |
 
-## Fail aplikasi
+Hanya emel yang didaftarkan oleh pentadbir boleh log masuk. Pendaftaran awam dimatikan.
 
-- `halaman/index.html` — senarai rekod
-- `halaman/borang.html` — borang rekod lawatan
-- `halaman/laporan.html` — laporan, cetakan dan eksport CSV
-- `halaman/app.js` — logik prototaip dan storan pelayar
+## Keselamatan
 
-Buka `halaman/index.html` dalam pelayar untuk pratonton prototaip. Ciri simpanan berfungsi hanya dalam pelayar dan peranti yang sama.
+- Semua kawalan akses dikuatkuasakan dalam pangkalan data melalui **Row Level Security (RLS)**, bukan dalam pelayar. Peranan ditentukan oleh jadual `pentadbir` dan `sekolah`.
+- Akses pentadbir memerlukan sesi yang dibuka **dengan kata laluan**. Emel pentadbir yang log masuk dengan kod emel tidak mendapat akses pentadbir.
+- Akaun yang tidak disediakan oleh sistem (cth. didaftar sendiri) tidak diiktiraf walaupun emelnya sepadan.
+- Sekolah hanya boleh mengubah Bahagian B melalui fungsi `hantar_maklumbalas`, dan tidak boleh mengubah dapatan pegawai.
+- Gambar disimpan dalam baldi storan **peribadi** dan dipaparkan melalui URL bertandatangan yang tamat tempoh dalam 1 jam.
+- Setiap perubahan direkodkan dalam `log_audit`, yang tidak boleh diubah atau dipadam.
+- Halaman menggunakan Content-Security-Policy yang ketat (tiada skrip sebaris dan tiada CDN luar). Pustaka `supabase-js` disimpan dalam `web/vendor/`.
+- Hanya kunci **awam** (anon/publishable) digunakan di pelayar. Kunci rahsia hanya digunakan dalam fungsi Edge.
 
-## Sasaran produksi
+## Struktur repositori
 
-- **Pangkalan data dan pengesahan:** Supabase
-- **Kod sumber:** GitHub, `ppdlimbang/MySMTS`
-- **Hosting statik:** GitHub Pages selepas integrasi Supabase, polisi Row Level Security, dan aliran pengesahan disediakan serta disemak
+```
+web/                         Laman yang diterbitkan ke GitHub Pages
+  index.html                 Log masuk (sekolah: kod emel, pentadbir: kata laluan)
+  app.html                   Aplikasi utama (rekod, sekolah, pentadbir, log audit)
+  kata-laluan.html           Tetapkan / set semula kata laluan pentadbir
+  js/  css/  img/  vendor/
+  config.example.js          Templat konfigurasi (config.js dijana semasa deploy)
+supabase/
+  migrations/                Skema, RLS, storan, audit, senarai awal sekolah
+  functions/sediakan-akaun/  Fungsi Edge: sediakan akaun bagi emel yang dibenarkan
+tests/                       Ujian keselamatan pangkalan data dan ujian antara muka
+.github/workflows/           Uji, kemudian terbit ke GitHub Pages
+```
 
-Kunci `service_role` Supabase tidak boleh diletakkan dalam kod pelayar atau repositori. Gunakan hanya kunci anon/publishable di klien bersama polisi Row Level Security yang mengehadkan akses. Simpan rahsia deployment dalam GitHub Actions Secrets jika diperlukan.
+## Pembangunan dan ujian
 
-## Pembangunan
+Keperluan: Node.js 20 atau lebih baharu. Ujian antara muka menggunakan Chrome atau Edge yang sedia terpasang.
 
-Aplikasi semasa tidak memerlukan pemasangan pakej atau proses binaan. Integrasi Supabase dan migrasi skema akan didokumenkan apabila dilaksanakan.
+```bash
+npm install
+npm test          # ujian keselamatan RLS (PostgreSQL sebenar melalui PGlite) + ujian antara muka
+npm run semak     # ujian + semakan statik (sintaks, rujukan ID, pematuhan CSP)
+```
+
+Pratonton setempat dengan projek Supabase sebenar:
+
+```bash
+cp web/config.example.js web/config.js   # isi URL dan kunci anon projek
+npm run serve                            # http://localhost:8080
+```
+
+Tambah `http://localhost:8080/kata-laluan.html` dalam *Redirect URLs* Supabase jika ingin menguji aliran kata laluan secara setempat.

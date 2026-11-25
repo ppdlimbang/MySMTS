@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="ms">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; manifest-src 'self'">
+  <meta name="referrer" content="no-referrer">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Tetapkan Kata Laluan | MySMTS PPD Limbang</title>
+  <link rel="icon" href="img/ikon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="css/app.css">
+  <script src="vendor/supabase.js" defer></script>
+  <script src="config.js" defer></script>
+  <script type="module" src="js/kata-laluan.js"></script>
+</head>
+<body>
+  <div class="halaman-log-masuk">
+    <div>
+      <div class="kad-log-masuk">
+        <div class="kepala-kad">
+          <div class="jenama-logo" id="logo"></div>
+          <span class="jenama-label">PPD LIMBANG, SARAWAK</span>
+          <h1>Tetapkan Kata Laluan Pentadbir</h1>
+          <p id="subtajuk">Mengesahkan pautan…</p>
+        </div>
+        <div class="isi-kad">
+          <div id="mesej" class="mesej" role="alert" hidden></div>
+
+          <form id="borang" class="tindanan" novalidate hidden>
+            <label class="medan">
+              <span>Kata laluan baharu <span class="wajib">*</span></span>
+              <input class="input" type="password" id="kataLaluan" autocomplete="new-password" minlength="12" maxlength="128" required>
+            </label>
+            <label class="medan">
+              <span>Sahkan kata laluan <span class="wajib">*</span></span>
+              <input class="input" type="password" id="sahkanKataLaluan" autocomplete="new-password" minlength="12" maxlength="128" required>
+            </label>
+            <p class="nota">Sekurang-kurangnya 12 aksara, mengandungi huruf besar, huruf kecil dan nombor. Jangan guna semula kata laluan daripada sistem lain.</p>
+            <button type="submit" class="btn btn-utama btn-penuh" id="btnSimpan">Simpan kata laluan</button>
+          </form>
+
+          <a class="btn btn-garis btn-penuh" href="index.html?tab=admin" id="pautanLogMasuk" hidden>Kembali ke halaman log masuk</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

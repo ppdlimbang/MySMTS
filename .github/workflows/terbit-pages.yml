@@ -1,0 +1,76 @@
+name: Uji dan terbit ke GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  uji:
+    name: Ujian keselamatan pangkalan data
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run semak
+
+  terbit:
+    name: Terbit
+    needs: uji
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Jana config.js daripada pemboleh ubah repositori
+        env:
+          SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ vars.SUPABASE_ANON_KEY }}
+        run: |
+          node --input-type=module -e '
+            const url = (process.env.SUPABASE_URL || "").trim().replace(/\/+$/, "");
+            const key = (process.env.SUPABASE_ANON_KEY || "").trim();
+            if (!/^https:\/\/[a-z0-9-]+\.supabase\.co$/.test(url)) {
+              console.error("::error::Pemboleh ubah repositori SUPABASE_URL tiada atau tidak sah (cth. https://abcd.supabase.co).");
+              process.exit(1);
+            }
+            if (!key) {
+              console.error("::error::Pemboleh ubah repositori SUPABASE_ANON_KEY tiada.");
+              process.exit(1);
+            }
+            if (key.startsWith("sb_secret_") || /service_role/.test(Buffer.from(key.split(".")[1] || "", "base64").toString())) {
+              console.error("::error::SUPABASE_ANON_KEY ialah kunci RAHSIA. Gunakan kunci anon/publishable sahaja.");
+              process.exit(1);
+            }
+            const fs = await import("node:fs");
+            fs.writeFileSync("web/config.js",
+              "window.KONFIG_MYSMTS = " + JSON.stringify({ supabaseUrl: url, supabaseAnonKey: key }, null, 2) + ";\n");
+            console.log("config.js dijana untuk " + url);
+          '
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: web
+      - id: deployment
+        uses: actions/deploy-pages@v4
