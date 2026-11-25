@@ -19,13 +19,22 @@ jobs:
     name: Ujian keselamatan pangkalan data
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm run semak
+      - name: Jalankan ujian
+        shell: bash
+        run: |
+          set -o pipefail
+          if ! npm run semak 2>&1 | tee hasil-ujian.txt; then
+            # Paparkan butiran kegagalan sebagai anotasi supaya mudah dilihat.
+            grep -nE "not ok|✖|error:|Error|expected|actual|location:" hasil-ujian.txt | head -40 \
+              | while IFS= read -r baris; do echo "::error::${baris}"; done
+            exit 1
+          fi
 
   terbit:
     name: Terbit
@@ -40,7 +49,7 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Jana config.js daripada pemboleh ubah repositori
         env:
