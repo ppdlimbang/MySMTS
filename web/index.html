@@ -113,7 +113,8 @@
               <fieldset id="borangSemua" disabled>
                 <div id="mesejRekod" class="mesej" role="alert" hidden></div>
 
-                <fieldset class="bahagian bahagian-a" id="bahagianA">
+                <!-- Bahagian A hanya dipaparkan kepada Admin PPD yang log masuk. -->
+                <fieldset class="bahagian bahagian-a" id="bahagianA" hidden>
                   <div class="bahagian-tajuk">
                     <h3><span class="huruf">A</span> Dapatan Pegawai Lawatan (PPD)</h3>
                     <span class="tag">Diisi Pegawai</span>
@@ -171,6 +172,8 @@
                     </div>
                   </div>
                 </fieldset>
+
+                <p class="rujukan-rekod" id="rujukanRekod" hidden></p>
 
                 <fieldset class="bahagian bahagian-b" id="bahagianB">
                   <div class="bahagian-tajuk">

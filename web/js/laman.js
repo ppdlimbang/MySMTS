@@ -338,9 +338,15 @@ function paparPanelBorang() {
   }
 
   $('#borangSemua').disabled = tunjukKunci;
-  const sekolah = mod === 'sekolah' || mod === 'tunggu';
-  $('#bahagianA').disabled = sekolah;
-  $('[data-boleh-tambah="dapatan"]').hidden = sekolah || mod === 'awam';
+  // Bahagian A (dapatan pegawai) hanya untuk Admin PPD; sekolah & orang awam hanya melihat Bahagian B.
+  $('#bahagianA').hidden = !admin();
+  $('#bahagianA').disabled = !admin();
+  const rujukan = $('#rujukanRekod');
+  rujukan.hidden = mod !== 'sekolah';
+  if (mod === 'sekolah') {
+    const r = borang.rekod;
+    rujukan.textContent = `Maklumbalas untuk lawatan ke ${namaSekolah(r.sekolah_id) || 'sekolah'} pada ${formatTarikh(r.tarikh)}${r.masa ? `, ${formatMasa(r.masa)}` : ''} (${r.nama_pegawai}).`;
+  }
   $('[data-boleh-tambah="maklumbalas"]').hidden = tunjukKunci;
   $('#wajibMaklumbalas').hidden = mod !== 'sekolah';
   $('#fMaklumbalas').required = mod === 'sekolah';
@@ -349,7 +355,7 @@ function paparPanelBorang() {
   opsMenunggu.disabled = mod === 'sekolah';
 
   $('#tajukBorang').textContent = {
-    awam: 'Borang Rekod Lawatan Baru',
+    awam: 'Borang Maklumbalas Sekolah',
     tunggu: 'Maklumbalas Sekolah',
     'admin-baru': 'Borang Rekod Lawatan Baru',
     'admin-edit': 'Kemaskini / Isi Maklumbalas',

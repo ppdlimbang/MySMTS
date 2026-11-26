@@ -429,7 +429,10 @@ dialog.lightbox::backdrop { background: rgb(15 23 42 / 85%); }
 .borang-panel { padding: 16px 20px 20px; }
 #borangSemua { display: flex; flex-direction: column; gap: 16px; }
 #borangSemua:disabled { opacity: .6; }
-#bahagianA:disabled .input { background: var(--kelabu-100); }
+.rujukan-rekod {
+  font-size: 13px; font-weight: 600; color: var(--emas-800); background: var(--emas-50);
+  border: 1px solid #fde68a; border-radius: 8px; padding: 10px 12px;
+}
 .borang-butang { display: flex; justify-content: flex-end; gap: 10px; }
 .rekod.sedang-diedit { outline: 3px solid var(--emas-500); outline-offset: 2px; }
 

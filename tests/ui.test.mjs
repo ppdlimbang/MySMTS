@@ -106,6 +106,7 @@ test('sekolah: log masuk dengan emel sahaja, kekal di laman utama dan isi maklum
 
   // Borang dikunci sehingga rekod sendiri dipilih
   assert.equal(await page.isDisabled('#fMaklumbalas'), true);
+  assert.equal(await page.isVisible('#bahagianA'), false);
   assert.match(await page.textContent('#kunciTajuk'), /SK Limbang/);
   assert.equal(await page.locator(`${kad('SK Kubong')} [data-tindakan="edit"]`).count(), 0, 'tiada butang edit pada rekod sekolah lain');
   assert.equal(await page.locator('#senaraiRekod [data-tindakan="padam"]').count(), 0);
@@ -113,7 +114,8 @@ test('sekolah: log masuk dengan emel sahaja, kekal di laman utama dan isi maklum
   // Isi maklumbalas rekod sendiri
   await page.click(`${kad('SK Limbang')} .rekod-kaki [data-tindakan="edit"]`);
   await page.waitForFunction(() => !document.querySelector('#fMaklumbalas').matches(':disabled'));
-  assert.equal(await page.isDisabled('#fDapatan'), true, 'Bahagian A dikunci untuk sekolah');
+  assert.equal(await page.isVisible('#bahagianA'), false, 'Bahagian A tidak dipaparkan kepada sekolah');
+  assert.match(await page.textContent('#rujukanRekod'), /SK Limbang pada 20 November 2026/);
   assert.equal(await page.isVisible('[data-boleh-tambah="dapatan"]'), false);
   assert.match(await page.textContent('#tajukBorang'), /Isi Maklumbalas Sekolah/);
   const pilihan = await page.$$eval('#fStatus option:not([disabled])', (o) => o.map((x) => x.value));
@@ -164,7 +166,9 @@ test('admin: log masuk kekal di laman utama; cipta, kemaskini, padam, cetak, eks
   assert.match(page.url(), /\/index\.html$/);
   assert.equal(await page.textContent('#penggunaPeranan'), 'Admin PPD');
   assert.equal(await page.isVisible('#navTab'), true);
+  assert.equal(await page.isVisible('#bahagianA'), true, 'Bahagian A untuk admin');
   assert.equal(await page.isDisabled('#fDapatan'), false, 'borang terbuka untuk admin');
+  assert.equal(await page.isVisible('#rujukanRekod'), false);
   assert.equal(await page.isVisible('#kunciBorang'), false);
 
   // Cipta rekod baharu dalam borang kiri
@@ -331,7 +335,8 @@ test('laman awam: semua rekod dipapar tanpa log masuk, borang dikunci', async (t
 
   assert.equal(await page.isVisible('#btnBukaLogMasuk'), true);
   assert.equal(await page.isVisible('#navTab'), false);
-  assert.equal(await page.isDisabled('#fDapatan'), true);
+  assert.equal(await page.isVisible('#bahagianA'), false, 'Bahagian A tersembunyi daripada orang awam');
+  assert.equal(await page.isDisabled('#fMaklumbalas'), true);
   assert.equal(await page.isDisabled('#btnSimpanRekod'), true);
   assert.match(await page.textContent('#kunciTajuk'), /Log masuk untuk mengisi/);
   assert.match(await page.textContent('#jamMasa'), /\d/);
