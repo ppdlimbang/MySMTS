@@ -25,6 +25,11 @@
           jawatan: 'SISC+', dapatan: 'Dapatan <script>alert(1)</script>', maklumbalas: null,
           status: 'Menunggu Maklumbalas', dicipta_pada: '2026-11-20T01:00:00Z', dikemaskini_pada: '2026-11-20T01:00:00Z', maklumbalas_pada: null,
         },
+        {
+          id: 'r2', sekolah_id: 's2', tarikh: '2026-11-18', masa: '08:15:00', nama_pegawai: 'Pn. Siti Aminah',
+          jawatan: 'SISC+ (Bahasa)', dapatan: 'Pusat sumber perlu diselenggara.', maklumbalas: 'Permohonan telah dihantar kepada PIBG.',
+          status: 'Selesai', dicipta_pada: '2026-11-18T00:15:00Z', dikemaskini_pada: '2026-11-19T00:00:00Z', maklumbalas_pada: '2026-11-19T00:00:00Z',
+        },
       ],
       lampiran: [
         { id: 'l1', rekod_id: 'r1', jenis: 'dapatan', laluan: 'r1/dapatan/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa.jpg', dimuat_naik_oleh: 'u-admin', dicipta_pada: '2026-11-20T01:00:00Z' },

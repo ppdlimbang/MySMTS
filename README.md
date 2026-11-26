@@ -13,7 +13,7 @@
 | **Pentadbir PPD** | Emel rasmi + kata laluan | Cipta, kemas kini dan padam rekod lawatan; urus senarai sekolah; lihat log audit; eksport CSV; tukar kata laluan sendiri |
 | **Sekolah** | Emel rasmi sekolah sahaja (tiada kod, tiada kata laluan) | Lihat rekod sekolah sendiri sahaja; isi maklumbalas, status dan gambar bukti (Bahagian B) |
 
-Hanya emel yang didaftarkan oleh pentadbir boleh log masuk. Pendaftaran awam dimatikan. Sistem tidak menghantar emel.
+Semua rekod lawatan boleh dilihat oleh orang awam tanpa log masuk (emel sekolah tidak didedahkan). Mengisi atau mengubah rekod memerlukan log masuk. Hanya emel yang didaftarkan oleh pentadbir boleh log masuk. Pendaftaran awam dimatikan. Sistem tidak menghantar emel.
 
 > Oleh kerana sekolah log masuk dengan emel sahaja, sesiapa yang mengetahui emel rasmi sekolah boleh log masuk sebagai sekolah itu. Setiap log masuk sekolah direkodkan dalam Log Audit (masa, IP, pelayar). Pentadbir didaftarkan melalui papan pemuka Supabase (lihat panduan penyediaan) dan menukar kata laluan sendiri dalam aplikasi.
 
@@ -32,8 +32,8 @@ Hanya emel yang didaftarkan oleh pentadbir boleh log masuk. Pendaftaran awam dim
 
 ```
 web/                         Laman yang diterbitkan ke GitHub Pages
-  index.html                 Log masuk (sekolah: emel sahaja, pentadbir: kata laluan)
-  app.html                   Aplikasi utama (rekod, sekolah, log audit)
+  index.html                 Satu halaman untuk semua: rekod awam, borang, log masuk,
+                             tab Sekolah & Log Audit (admin sahaja)
   js/  css/  img/  vendor/
   config.example.js          Templat konfigurasi (config.js dijana semasa deploy)
 supabase/

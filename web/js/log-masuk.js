@@ -9,7 +9,7 @@ const el = {
   tabAdmin: $('#tabAdmin'),
   panelSekolah: $('#panelSekolah'),
   panelAdmin: $('#panelAdmin'),
-  borangSekolah: $('#borangSekolah'),
+  borangSekolah: $('#borangSekolahLogMasuk'),
   emelSekolah: $('#emelSekolah'),
   btnLogMasukSekolah: $('#btnLogMasukSekolah'),
   borangAdmin: $('#borangAdmin'),
@@ -75,7 +75,8 @@ async function semakSelepasLogMasuk(peranDijangka) {
       ? 'Emel ini ialah akaun pentadbir. Sila log masuk melalui tab "Admin PPD" menggunakan kata laluan.'
       : TIDAK_BERDAFTAR);
   }
-  window.location.replace('app.html');
+  // Kekal di laman yang sama; muat semula supaya laman dipaparkan mengikut peranan.
+  window.location.replace(window.location.pathname);
 }
 
 // ---------- Sekolah ----------
