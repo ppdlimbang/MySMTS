@@ -94,7 +94,7 @@ test('sekolah: log masuk dengan emel sahaja, kekal di laman utama dan isi maklum
   await page.click('#btnLogMasukSekolah');
   await page.waitForSelector('#lencanaPengguna:not([hidden])');
   await page.waitForSelector('#senaraiRekod article');
-  assert.match(page.url(), /\/index\.html$/);
+  assert.equal(page.url(), `${ASAL}/`, 'alamat bersih tanpa index.html');
   assert.equal(await page.textContent('#penggunaPeranan'), 'Sekolah');
   assert.equal(await page.textContent('#penggunaNama'), 'SK Limbang');
   assert.equal(await page.isVisible('#navTab'), false, 'tiada tab admin untuk sekolah');
@@ -137,8 +137,8 @@ test('sekolah: log masuk dengan emel sahaja, kekal di laman utama dan isi maklum
 
   await page.fill('#fMaklumbalas', 'Tindakan pembersihan telah dibuat.');
   await page.selectOption('#fStatus', 'Selesai');
-  await page.setInputFiles('#failMaklumbalas', { name: 'bukti.png', mimeType: 'image/png', buffer: PNG_1PX });
-  await page.waitForSelector('#galeriMaklumbalas .gambar-kecil.baru');
+  await page.setInputFiles('#failMaklumbalas', [1, 2, 3, 4].map((i) => ({ name: `bukti${i}.png`, mimeType: 'image/png', buffer: PNG_1PX })));
+  await page.waitForFunction(() => document.querySelectorAll('#galeriMaklumbalas .gambar-kecil.baru').length === 4);
   await page.click('#btnSimpanRekod');
   await page.waitForSelector('.toast-berjaya');
   await page.waitForFunction(() => document.querySelector('#fMaklumbalas').matches(':disabled'), null, { timeout: 5000 });
@@ -146,9 +146,11 @@ test('sekolah: log masuk dengan emel sahaja, kekal di laman utama dan isi maklum
   const p2 = await panggilan(page);
   const rpc = p2.find((x) => x.jenis === 'rpc' && x.nama === 'hantar_maklumbalas');
   assert.deepEqual(rpc.arg, { p_rekod_id: 'r1', p_maklumbalas: 'Tindakan pembersihan telah dibuat.', p_status: 'Selesai' });
-  const muatNaik = p2.find((x) => x.op === 'upload');
-  assert.match(muatNaik.laluan, /^r1\/maklumbalas\/[0-9a-f-]{36}\.jpg$/);
-  assert.ok(p2.some((x) => x.jadual === 'lampiran' && x.op === 'insert' && x.nilai.jenis === 'maklumbalas'));
+  const muatNaik = p2.filter((x) => x.op === 'upload');
+  assert.equal(muatNaik.length, 4, '4 gambar dimuat naik (serentak)');
+  assert.ok(muatNaik.every((m) => /^r1\/maklumbalas\/[0-9a-f-]{36}\.jpg$/.test(m.laluan)));
+  assert.equal(new Set(muatNaik.map((m) => m.laluan)).size, 4, 'laluan unik');
+  assert.equal(p2.filter((x) => x.jadual === 'lampiran' && x.op === 'insert' && x.nilai.jenis === 'maklumbalas').length, 4);
   assert.ok(!p2.some((x) => x.jadual === 'rekod_lawatan' && x.op !== 'select'), 'sekolah tidak menulis terus ke rekod_lawatan');
   await page.waitForFunction(() => document.querySelector('#senaraiRekod').textContent.includes('Tindakan pembersihan'));
   await page.waitForFunction(() => /Semua rekod lawatan telah diberi maklumbalas/.test(document.querySelector('#kunciTeks').textContent));
@@ -175,7 +177,7 @@ test('admin: log masuk kekal di laman utama; cipta, kemaskini, padam, cetak, eks
   await page.waitForFunction(() => /tidak mempunyai akses pentadbir/.test(document.querySelector('#mesej').textContent));
 
   await masukAdmin(page);
-  assert.match(page.url(), /\/index\.html$/);
+  assert.equal(page.url(), `${ASAL}/`, 'alamat bersih tanpa index.html');
   assert.equal(await page.textContent('#penggunaPeranan'), 'Admin PPD');
   assert.equal(await page.isVisible('#navTab'), true);
   assert.equal(await page.isVisible('#bahagianA'), true, 'Bahagian A untuk admin');
@@ -278,6 +280,7 @@ test('emel admin atau sekolah tidak aktif ditolak di tab sekolah', async (t) => 
   if (!page) return;
   await page.goto(`${ASAL}/index.html?log-masuk=1`);
   await page.waitForSelector('#dialogLogMasuk[open]');
+  assert.equal(page.url(), `${ASAL}/`, 'parameter & index.html dibuang daripada bar alamat');
 
   await page.fill('#emelSekolah', 'pentadbir@moe.gov.my');
   await page.click('#btnLogMasukSekolah');

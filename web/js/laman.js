@@ -8,7 +8,7 @@ import { sb, konfigSah, dapatkanProfil, tetapKataLaluanPentadbir, BALDI } from '
 import {
   $, $$, esc, formatTarikh, formatMasa, formatCapMasa, tarikhHariIni, masaSekarang, STATUS, kelasStatus,
   toast, mesejRalat, setSibuk, paparMesej, mampatGambar, muatTurun, selCsv, sahkan, bersihCarian,
-  EMEL_SAH, normalEmel, IKON_LOGO, semakKekuatanKataLaluan,
+  EMEL_SAH, normalEmel, IKON_LOGO, semakKekuatanKataLaluan, alamatLaman,
 } from './util.js';
 import { isiCetakan, cetakBekas } from './cetakan.js';
 
@@ -40,7 +40,7 @@ let borang = null; // keadaan borang kiri
 const admin = () => keadaan.profil?.peranan === 'admin';
 const sekolahSaya = () => (keadaan.profil?.peranan === 'sekolah' ? keadaan.profil.sekolah?.id || null : null);
 const bolehUrus = (r) => admin() || (sekolahSaya() && sekolahSaya() === r.sekolah_id);
-const muatSemulaHalaman = (cari = '') => window.location.replace(window.location.pathname + cari);
+const muatSemulaHalaman = (cari = '') => window.location.replace(alamatLaman() + cari);
 
 // =====================================================================
 // Kepala: jam & pengguna
@@ -628,8 +628,9 @@ async function simpanRekod(e) {
     return;
   }
 
-  btn.textContent = 'Memuat naik gambar…';
-  const gagal = await prosesGambar(id);
+  const gagal = await prosesGambar(id, (siap, jumlah) => {
+    btn.textContent = `Memuat naik gambar ${siap}/${jumlah}…`;
+  });
   const mod = borang.mod;
   setSibuk(btn, false);
   borang.ubah = false;
@@ -644,8 +645,46 @@ async function simpanRekod(e) {
   await muatSemula();
 }
 
-/** Padam gambar yang dibuang, kemudian muat naik gambar baharu. Pulangkan bilangan kegagalan. */
-async function prosesGambar(rekodId) {
+const SERENTAK_MUAT_NAIK = 3;
+const HAD_MASA_GAMBAR_MS = 90 * 1000;
+
+/** Tolak janji jika melebihi had masa (supaya satu gambar tidak menggantung borang). */
+function denganHadMasa(janji, ms) {
+  let pemasa;
+  return Promise.race([
+    janji,
+    new Promise((_, tolak) => { pemasa = setTimeout(() => tolak(new Error('Had masa muat naik dicapai.')), ms); }),
+  ]).finally(() => clearTimeout(pemasa));
+}
+
+/** Muat naik satu gambar dan rekodkan lampirannya. Pulangkan true jika berjaya. */
+async function muatNaikSatu(rekodId, jenis, blob) {
+  const laluan = `${rekodId}/${jenis}/${crypto.randomUUID()}.jpg`;
+  try {
+    const { error: eu } = await denganHadMasa(
+      sb.storage.from(BALDI).upload(laluan, blob, { contentType: 'image/jpeg', cacheControl: '3600', upsert: false }),
+      HAD_MASA_GAMBAR_MS,
+    );
+    if (eu) throw eu;
+  } catch (e) {
+    console.warn('Muat naik gagal:', e);
+    sb.storage.from(BALDI).remove([laluan]).catch(() => {});
+    return false;
+  }
+  const { error: ei } = await sb.from('lampiran').insert({ rekod_id: rekodId, jenis, laluan });
+  if (ei) {
+    console.warn('Lampiran gagal direkod:', ei);
+    await sb.storage.from(BALDI).remove([laluan]);
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Padam gambar yang dibuang, kemudian muat naik gambar baharu (beberapa serentak).
+ * Pulangkan bilangan kegagalan.
+ */
+async function prosesGambar(rekodId, kemajuan = () => {}) {
   let gagal = 0;
   const semuaSedia = [...borang.sedia.dapatan, ...borang.sedia.maklumbalas];
 
@@ -662,24 +701,21 @@ async function prosesGambar(rekodId) {
     keadaan.urlGambar.delete(l.laluan);
   }
 
-  for (const jenis of ['dapatan', 'maklumbalas']) {
-    if (jenis === 'dapatan' && !admin()) continue;
-    for (const g of borang.baru[jenis]) {
-      const laluan = `${rekodId}/${jenis}/${crypto.randomUUID()}.jpg`;
-      const { error: eu } = await sb.storage.from(BALDI).upload(laluan, g.blob, { contentType: 'image/jpeg', cacheControl: '3600', upsert: false });
-      if (eu) {
-        console.warn('Muat naik gagal:', eu);
-        gagal += 1;
-        continue;
-      }
-      const { error: ei } = await sb.from('lampiran').insert({ rekod_id: rekodId, jenis, laluan });
-      if (ei) {
-        console.warn('Lampiran gagal direkod:', ei);
-        gagal += 1;
-        await sb.storage.from(BALDI).remove([laluan]);
-      }
+  const tugas = ['dapatan', 'maklumbalas']
+    .filter((jenis) => jenis === 'maklumbalas' || admin())
+    .flatMap((jenis) => borang.baru[jenis].map((g) => ({ jenis, blob: g.blob })));
+  let siap = 0;
+  let seterusnya = 0;
+  if (tugas.length) kemajuan(0, tugas.length);
+  const pekerja = async () => {
+    while (seterusnya < tugas.length) {
+      const t = tugas[seterusnya++];
+      if (!(await muatNaikSatu(rekodId, t.jenis, t.blob))) gagal += 1;
+      siap += 1;
+      kemajuan(siap, tugas.length);
     }
-  }
+  };
+  await Promise.all(Array.from({ length: Math.min(SERENTAK_MUAT_NAIK, tugas.length) }, pekerja));
   return gagal;
 }
 

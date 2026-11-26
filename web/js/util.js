@@ -6,6 +6,21 @@ if (window.top !== window.self) {
   try { window.top.location.replace(window.self.location.href); } catch { /* diabaikan */ }
 }
 
+// ---------- Alamat laman ----------
+
+/** Alamat bersih laman (folder sahaja, tanpa "index.html", tanpa parameter). */
+export function alamatLaman() {
+  return window.location.pathname.replace(/index\.html$/, '');
+}
+
+/** Buang "index.html", parameter dan serpihan daripada bar alamat tanpa memuat semula. */
+export function kemasAlamat() {
+  const bersih = alamatLaman();
+  if (window.location.pathname !== bersih || window.location.search || window.location.hash) {
+    history.replaceState(null, '', bersih);
+  }
+}
+
 export const $ = (sel, akar = document) => akar.querySelector(sel);
 export const $$ = (sel, akar = document) => Array.from(akar.querySelectorAll(sel));
 
@@ -166,7 +181,7 @@ const JENIS_GAMBAR = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'ima
  * Mampatkan gambar kepada JPEG (sisi terpanjang <= maks px).
  * Mengembalikan Blob JPEG. Fail bukan gambar ditolak.
  */
-export async function mampatGambar(fail, maks = 1600, kualiti = 0.82) {
+export async function mampatGambar(fail, maks = 1280, kualiti = 0.72) {
   if (!fail || (fail.type && !fail.type.startsWith('image/'))) {
     throw new Error('Fail bukan gambar.');
   }

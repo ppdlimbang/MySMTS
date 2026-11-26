@@ -1,6 +1,6 @@
 // Tetingkap log masuk pada laman utama (Sekolah: emel sahaja; Admin PPD: emel + kata laluan).
 import { sb, konfigSah, dapatkanProfil, logMasukSekolah } from './klien.js';
-import { $, $$, EMEL_SAH, normalEmel, mesejRalat, setSibuk, paparMesej } from './util.js';
+import { $, $$, EMEL_SAH, normalEmel, mesejRalat, setSibuk, paparMesej, alamatLaman, kemasAlamat } from './util.js';
 
 const el = {
   dialog: $('#dialogLogMasuk'),
@@ -76,7 +76,7 @@ async function semakSelepasLogMasuk(peranDijangka) {
       : TIDAK_BERDAFTAR);
   }
   // Kekal di laman yang sama; muat semula supaya laman dipaparkan mengikut peranan.
-  window.location.replace(window.location.pathname);
+  window.location.replace(alamatLaman());
 }
 
 // ---------- Sekolah ----------
@@ -144,11 +144,12 @@ el.dialog.addEventListener('close', () => {
 });
 
 function mula() {
+  const param = new URLSearchParams(window.location.search);
+  kemasAlamat();
   if (!konfigSah) {
     document.querySelectorAll('#dialogLogMasuk form button, #dialogLogMasuk form input').forEach((x) => { x.disabled = true; });
     return;
   }
-  const param = new URLSearchParams(window.location.search);
   if (param.get('sebab') === 'tamat') bukaLogMasuk('sekolah', 'Sesi anda telah tamat. Sila log masuk semula.');
   else if (param.get('tab') === 'admin') bukaLogMasuk('admin');
   else if (param.has('log-masuk')) bukaLogMasuk();

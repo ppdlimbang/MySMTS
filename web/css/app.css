@@ -513,3 +513,5 @@ dialog.lightbox::backdrop { background: rgb(15 23 42 / 85%); }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+.ruang-atas { margin-top: 16px; }
