@@ -111,7 +111,18 @@ test('sekolah: log masuk dengan emel sahaja, kekal di laman utama dan isi maklum
   assert.equal(await page.locator(`${kad('SK Kubong')} [data-tindakan="edit"]`).count(), 0, 'tiada butang edit pada rekod sekolah lain');
   assert.equal(await page.locator('#senaraiRekod [data-tindakan="padam"]').count(), 0);
 
-  // Isi maklumbalas rekod sendiri
+  // Pilihan rekod dalam borang: hanya rekod sekolah sendiri
+  await page.waitForFunction(() => /1 rekod lawatan menunggu maklumbalas/.test(document.querySelector('#kunciTeks').textContent));
+  assert.equal(await page.isVisible('#pilihRekodSekolah'), true);
+  const opsyen = await page.$$eval('#pilihRekodSekolah option', (o) => o.map((x) => x.value));
+  assert.deepEqual(opsyen, ['', 'r1'], 'hanya rekod sekolah sendiri');
+  await page.selectOption('#pilihRekodSekolah', 'r1');
+  await page.waitForFunction(() => !document.querySelector('#fMaklumbalas').matches(':disabled'));
+  assert.equal(await page.isVisible('#pilihRekodSekolah'), false);
+  await page.click('#btnBatalEdit');
+  await page.waitForFunction(() => document.querySelector('#fMaklumbalas').matches(':disabled'));
+
+  // Isi maklumbalas rekod sendiri (melalui butang pada kad)
   await page.click(`${kad('SK Limbang')} .rekod-kaki [data-tindakan="edit"]`);
   await page.waitForFunction(() => !document.querySelector('#fMaklumbalas').matches(':disabled'));
   assert.equal(await page.isVisible('#bahagianA'), false, 'Bahagian A tidak dipaparkan kepada sekolah');
@@ -140,6 +151,7 @@ test('sekolah: log masuk dengan emel sahaja, kekal di laman utama dan isi maklum
   assert.ok(p2.some((x) => x.jadual === 'lampiran' && x.op === 'insert' && x.nilai.jenis === 'maklumbalas'));
   assert.ok(!p2.some((x) => x.jadual === 'rekod_lawatan' && x.op !== 'select'), 'sekolah tidak menulis terus ke rekod_lawatan');
   await page.waitForFunction(() => document.querySelector('#senaraiRekod').textContent.includes('Tindakan pembersihan'));
+  await page.waitForFunction(() => /Semua rekod lawatan telah diberi maklumbalas/.test(document.querySelector('#kunciTeks').textContent));
 
   // Log keluar -> laman awam
   await page.click('#btnLogKeluar');

@@ -425,6 +425,7 @@ dialog.lightbox::backdrop { background: rgb(15 23 42 / 85%); }
 .kunci.kunci-masuk { background: #ecfdf5; border-color: #a7f3d0; }
 .kunci.kunci-masuk .kunci-ikon { background: var(--hijau-700); color: #fff; }
 .kunci.kunci-masuk h3 { color: var(--hijau-800); }
+.kunci .pilih-rekod { margin-top: 4px; }
 
 .borang-panel { padding: 16px 20px 20px; }
 #borangSemua { display: flex; flex-direction: column; gap: 16px; }

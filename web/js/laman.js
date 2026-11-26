@@ -27,6 +27,7 @@ const keadaan = {
   sekolah: [], // admin: dengan emel & aktif; lain-lain: id, nama, kod sahaja
   penapis: { carian: '', status: 'SEMUA' },
   rekod: [],
+  rekodSaya: [], // sekolah: rekod lawatan sekolah sendiri (untuk pilihan borang)
   jumlah: 0,
   urlGambar: new Map(), // laluan -> { url, tamat }
   auditDari: 0,
@@ -178,7 +179,25 @@ async function muatRekod({ tambah = false } = {}) {
 }
 
 async function muatSemula() {
-  await Promise.all([muatStatistik(), muatRekod()]);
+  await Promise.all([muatStatistik(), muatRekod(), muatRekodSaya()]);
+}
+
+/** Sekolah: senarai rekod lawatan sekolah sendiri untuk dipilih dalam borang. */
+async function muatRekodSaya() {
+  const id = sekolahSaya();
+  if (!id) return;
+  const { data, error } = await sb.from('rekod_lawatan').select(PILIH_REKOD_LOG_MASUK)
+    .eq('sekolah_id', id)
+    .order('tarikh', { ascending: false })
+    .range(0, 199);
+  if (error) {
+    console.warn('Rekod sekolah tidak dapat dimuatkan:', error);
+    return;
+  }
+  // Rekod yang belum diberi maklumbalas dipaparkan dahulu.
+  keadaan.rekodSaya = (data || []).sort((a, b) => Number(Boolean(a.maklumbalas)) - Number(Boolean(b.maklumbalas)));
+  $('#pilihRekodSekolah').innerHTML = '<option value="">— Pilih rekod lawatan —</option>' + keadaan.rekodSaya.map((r) => `<option value="${esc(r.id)}">${esc(formatTarikh(r.tarikh))} · ${esc(r.nama_pegawai)} · ${esc(r.maklumbalas ? r.status : 'Menunggu maklumbalas')}</option>`).join('');
+  if (!borang) paparPanelBorang();
 }
 
 async function sediakanUrlGambar(laluan) {
@@ -333,9 +352,14 @@ function paparPanelBorang() {
     $('#kunciTajuk').textContent = 'Log masuk untuk mengisi borang';
     $('#kunciTeks').textContent = 'Semua rekod boleh dilihat oleh orang awam. Hanya pegawai PPD (Bahagian A) dan pihak sekolah (Bahagian B) yang log masuk boleh merekod atau mengisi maklumbalas.';
   } else if (mod === 'tunggu') {
-    $('#kunciTajuk').textContent = `Anda log masuk sebagai ${keadaan.profil.sekolah?.nama || 'sekolah'}`;
-    $('#kunciTeks').textContent = 'Klik "Isi maklumbalas" pada rekod sekolah anda dalam senarai untuk mengisi Bahagian B di sini.';
+    const nama = keadaan.profil.sekolah?.nama || 'sekolah anda';
+    const menunggu = keadaan.rekodSaya.filter((r) => !r.maklumbalas).length;
+    $('#kunciTajuk').textContent = `Anda log masuk sebagai ${nama}`;
+    $('#kunciTeks').textContent = keadaan.rekodSaya.length
+      ? `${menunggu ? `${menunggu} rekod lawatan menunggu maklumbalas anda.` : 'Semua rekod lawatan telah diberi maklumbalas.'} Pilih rekod di bawah (atau klik "Isi maklumbalas" pada rekod dalam senarai) untuk mengisi Bahagian B.`
+      : `Belum ada rekod lawatan untuk ${nama}. Borang maklumbalas (Bahagian B) akan dibuka selepas pegawai PPD merekod lawatan ke sekolah anda.`;
   }
+  $('#pilihRekodBalut').hidden = !(mod === 'tunggu' && keadaan.rekodSaya.length);
 
   $('#borangSemua').disabled = tunjukKunci;
   // Bahagian A (dapatan pegawai) hanya untuk Admin PPD; sekolah & orang awam hanya melihat Bahagian B.
@@ -1011,6 +1035,13 @@ function pasangPeristiwa() {
   $('#galeriMaklumbalas').addEventListener('click', klikGaleriBorang);
   $('#btnKosongkan').addEventListener('click', kosongkanBorang);
   $('#btnBatalEdit').addEventListener('click', kosongkanBorang);
+  $('#pilihRekodSekolah').addEventListener('change', async () => {
+    const rekod = keadaan.rekodSaya.find((r) => r.id === $('#pilihRekodSekolah').value);
+    $('#pilihRekodSekolah').value = '';
+    if (!rekod) return;
+    await sediakanUrlGambar((rekod.lampiran || []).map((l) => l.laluan));
+    editRekod(rekod);
+  });
 
   // Kepala
   $('#btnRekodBaru').addEventListener('click', async () => {
