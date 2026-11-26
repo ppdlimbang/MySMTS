@@ -3,70 +3,241 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; manifest-src 'self'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; manifest-src 'self'">
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <meta name="robots" content="noindex, nofollow">
-  <title>Log Masuk | MySMTS PPD Limbang</title>
+  <meta name="description" content="Sistem Maklumbalas & Tindakan Sekolah PPD Limbang: dapatan lawatan pegawai PPD dan maklumbalas pihak sekolah.">
+  <title>Sistem Maklumbalas &amp; Tindakan Sekolah | PPD Limbang</title>
   <link rel="icon" href="img/ikon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="css/app.css">
   <script src="vendor/supabase.js" defer></script>
   <script src="config.js" defer></script>
+  <script type="module" src="js/laman.js"></script>
   <script type="module" src="js/log-masuk.js"></script>
 </head>
-<body>
-  <div class="halaman-log-masuk">
-    <div>
-      <div class="kad-log-masuk">
-        <div class="kepala-kad">
-          <div class="jenama-logo" id="logo"></div>
-          <span class="jenama-label">PPD LIMBANG, SARAWAK</span>
-          <h1>Sistem Maklumbalas &amp; Tindakan Sekolah</h1>
-          <p>Log masuk untuk meneruskan</p>
-        </div>
+<body class="laman">
 
-        <div class="isi-kad">
-          <div id="ralatKonfig" class="mesej mesej-ralat" hidden>
-            Sistem belum dikonfigurasi (fail <code>config.js</code> tiada atau tidak lengkap). Hubungi pentadbir sistem.
+  <!-- ================= KEPALA RASMI ================= -->
+  <header class="kepala">
+    <div class="bekas">
+      <div class="jenama">
+        <div class="jenama-logo" id="logo"></div>
+        <div>
+          <div class="jenama-baris">
+            <span class="jenama-label">PPD LIMBANG, SARAWAK</span>
+            <span class="jenama-sub">Sistem Pemantauan Lawatan</span>
           </div>
-
-          <div id="mesej" class="mesej" role="alert" hidden></div>
-
-          <div class="tab-peranan" role="tablist" aria-label="Jenis pengguna">
-            <button type="button" role="tab" id="tabSekolah" aria-selected="true" aria-controls="panelSekolah">Sekolah</button>
-            <button type="button" role="tab" id="tabAdmin" aria-selected="false" aria-controls="panelAdmin">Pentadbir PPD</button>
-          </div>
-
-          <!-- SEKOLAH: emel rasmi sahaja -->
-          <section id="panelSekolah" role="tabpanel" aria-labelledby="tabSekolah">
-            <form id="borangSekolah" class="tindanan" novalidate>
-              <label class="medan">
-                <span>Emel rasmi sekolah <span class="wajib">*</span></span>
-                <input class="input" type="email" id="emelSekolah" name="email" autocomplete="email" inputmode="email" required maxlength="254" placeholder="cth: yba1234@moe.edu.my">
-              </label>
-              <p class="nota">Masukkan emel rasmi sekolah yang didaftarkan oleh PPD. Tiada kata laluan diperlukan.</p>
-              <button type="submit" class="btn btn-utama btn-penuh" id="btnLogMasukSekolah">Log masuk sekolah</button>
-            </form>
-          </section>
-
-          <!-- PENTADBIR: emel rasmi + kata laluan -->
-          <section id="panelAdmin" role="tabpanel" aria-labelledby="tabAdmin" hidden>
-            <form id="borangAdmin" class="tindanan" novalidate>
-              <label class="medan">
-                <span>Emel rasmi pentadbir <span class="wajib">*</span></span>
-                <input class="input" type="email" id="emelAdmin" name="username" autocomplete="username" inputmode="email" required maxlength="254" placeholder="nama@moe.gov.my">
-              </label>
-              <label class="medan">
-                <span>Kata laluan <span class="wajib">*</span></span>
-                <input class="input" type="password" id="kataLaluan" name="password" autocomplete="current-password" required maxlength="128">
-              </label>
-              <button type="submit" class="btn btn-utama btn-penuh" id="btnLogMasukAdmin">Log masuk pentadbir</button>
-              <p class="nota">Lupa kata laluan? Minta pentadbir PPD lain menetapkan semula kata laluan anda melalui tab <strong>Pentadbir</strong>.</p>
-            </form>
-          </section>
+          <h1>SISTEM MAKLUMBALAS &amp; TINDAKAN SEKOLAH</h1>
+          <p>Pengurusan Dapatan Lawatan Pegawai PPD &amp; Respons Pihak Sekolah</p>
         </div>
       </div>
-      <p class="kaki-log-masuk">© <span id="tahun"></span> Pejabat Pendidikan Daerah Limbang · Akses terhad kepada pengguna berdaftar</p>
+
+      <div class="kepala-kanan">
+        <div class="jam" aria-live="off">
+          <div id="jamMasa" class="jam-masa">--:--:--</div>
+          <div id="jamTarikh" class="jam-tarikh">-- --- ----</div>
+        </div>
+
+        <button type="button" class="btn btn-telus" id="btnBukaLogMasuk" data-buka-log-masuk>Log Masuk</button>
+
+        <div class="pengguna" id="lencanaPengguna" hidden>
+          <div class="pengguna-info">
+            <div class="pengguna-peranan" id="penggunaPeranan"></div>
+            <div class="pengguna-nama" id="penggunaNama"></div>
+          </div>
+          <a class="btn btn-telus btn-kecil" id="pautanSistem" href="app.html">Buka sistem</a>
+          <button type="button" class="btn btn-telus btn-kecil" id="btnLogKeluar">Keluar</button>
+        </div>
+
+        <button type="button" class="btn btn-emas" id="btnRekodBaru">+ Rekod Lawatan Baru</button>
+      </div>
     </div>
-  </div>
+  </header>
+
+  <main>
+    <div class="bekas">
+      <div id="ralatKonfig" class="mesej mesej-ralat ruang-bawah" hidden>
+        Sistem belum dikonfigurasi (fail <code>config.js</code> tiada atau tidak lengkap). Hubungi pentadbir sistem.
+      </div>
+
+      <!-- ================= RINGKASAN STATISTIK ================= -->
+      <section class="statistik statistik-3" aria-label="Ringkasan">
+        <button type="button" class="stat stat-jumlah" data-status="SEMUA" aria-pressed="true">
+          <span class="stat-label">Jumlah Lawatan Direkod</span>
+          <div class="stat-nilai" id="statJumlah">–</div>
+          <span class="stat-nota">Klik untuk tunjuk semua rekod</span>
+        </button>
+        <button type="button" class="stat stat-menunggu" data-status="Menunggu Maklumbalas" aria-pressed="false">
+          <span class="stat-label">Menunggu Maklumbalas</span>
+          <div class="stat-nilai" id="statMenunggu">–</div>
+          <span class="stat-nota">Belum diisi oleh pihak sekolah</span>
+        </button>
+        <button type="button" class="stat stat-selesai" data-status="Selesai" aria-pressed="false">
+          <span class="stat-label">Selesai / Diisi Sekolah</span>
+          <div class="stat-nilai" id="statSelesai">–</div>
+          <span class="stat-nota">Tindakan sekolah lengkap</span>
+        </button>
+      </section>
+
+      <div class="laman-susun">
+
+        <!-- ================= KOLUM KIRI: BORANG ================= -->
+        <section class="kad panel-borang" id="panelBorang" aria-labelledby="tajukBorang">
+          <div class="panel-borang-kepala">
+            <h2 id="tajukBorang">Borang Rekod Lawatan Baru</h2>
+          </div>
+
+          <div class="kunci" id="kunciBorang">
+            <div class="kunci-ikon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+            </div>
+            <div>
+              <h3 id="kunciTajuk">Log masuk untuk mengisi borang</h3>
+              <p id="kunciTeks">Semua rekod boleh dilihat oleh orang awam. Hanya pegawai PPD (Bahagian A) dan pihak sekolah (Bahagian B) yang log masuk boleh merekod atau mengisi maklumbalas.</p>
+              <button type="button" class="btn btn-utama btn-kecil" id="btnKunciLogMasuk" data-buka-log-masuk>Log Masuk</button>
+              <a class="btn btn-utama btn-kecil" id="pautanBorang" href="app.html" hidden>Buka borang</a>
+            </div>
+          </div>
+
+          <form class="borang-pratonton" aria-label="Pratonton borang (dikunci)">
+            <fieldset disabled>
+              <div class="bahagian bahagian-a">
+                <div class="bahagian-tajuk">
+                  <h3><span class="huruf">A</span> Dapatan Pegawai Lawatan (PPD)</h3>
+                  <span class="tag">Diisi Pegawai</span>
+                </div>
+                <label class="medan"><span>Nama Sekolah <span class="wajib">*</span></span>
+                  <input class="input" type="text" placeholder="Cth: SMK Limbang / SK Kubong"></label>
+                <div class="grid-2">
+                  <label class="medan"><span>Tarikh Lawatan <span class="wajib">*</span></span><input class="input" type="date"></label>
+                  <label class="medan"><span>Masa Lawatan <span class="wajib">*</span></span><input class="input" type="time"></label>
+                </div>
+                <label class="medan"><span>Nama Pegawai Lawatan <span class="wajib">*</span></span>
+                  <input class="input" type="text" placeholder="Cth: En. Mohamad Azlan bin Hj. Ahmad"></label>
+                <label class="medan"><span>Jawatan Pegawai <span class="wajib">*</span></span>
+                  <input class="input" type="text" placeholder="Pilih atau taip jawatan…"></label>
+                <label class="medan"><span>Dapatan &amp; Teguran Lawatan <span class="wajib">*</span></span>
+                  <textarea class="input" rows="3" placeholder="Nyatakan hasil pemantauan, isu yang ditemui, atau perkara yang perlu ditambah baik…"></textarea></label>
+                <span class="btn btn-garis btn-kecil palsu">Pilih / Tambah Gambar Dapatan</span>
+              </div>
+
+              <div class="bahagian bahagian-b">
+                <div class="bahagian-tajuk">
+                  <h3><span class="huruf">B</span> Maklumbalas &amp; Tindakan Sekolah</h3>
+                  <span class="tag">Diisi oleh Sekolah</span>
+                </div>
+                <label class="medan"><span>Tindakan / Ulasan Pihak Sekolah</span>
+                  <textarea class="input" rows="3" placeholder="Nyatakan tindakan penambahbaikan yang telah/akan diambil…"></textarea></label>
+                <span class="btn btn-garis btn-kecil palsu">Pilih / Tambah Gambar Bukti Sekolah</span>
+                <label class="medan"><span>Status Tindakan Sekolah <span class="wajib">*</span></span>
+                  <select class="input"><option>Menunggu Maklumbalas Sekolah</option></select></label>
+              </div>
+
+              <div class="borang-butang">
+                <span class="btn btn-garis palsu">Kosongkan</span>
+                <span class="btn btn-utama palsu">Simpan Rekod</span>
+              </div>
+            </fieldset>
+          </form>
+        </section>
+
+        <!-- ================= KOLUM KANAN: SENARAI REKOD ================= -->
+        <section class="senarai-laman" aria-labelledby="tajukSenarai">
+          <h2 id="tajukSenarai" class="sr-only">Senarai rekod lawatan</h2>
+          <div class="kad bar-alat">
+            <label class="medan medan-carian">
+              <span class="sr-only">Carian</span>
+              <input class="input" type="search" id="carian" maxlength="80" placeholder="Cari sekolah, pegawai, dapatan…">
+            </label>
+            <label class="medan">
+              <span class="sr-only">Status</span>
+              <select class="input" id="penapisStatus">
+                <option value="SEMUA">Semua Status</option>
+                <option value="Menunggu Maklumbalas">Menunggu Maklumbalas</option>
+                <option value="Dalam Tindakan">Dalam Tindakan</option>
+                <option value="Selesai">Selesai</option>
+              </select>
+            </label>
+            <div class="tindakan-bar">
+              <button type="button" class="btn btn-hijau" id="btnEksport">Eksport CSV</button>
+            </div>
+          </div>
+
+          <div id="senaraiRekod" class="senarai" aria-live="polite"></div>
+
+          <div id="rekodKosong" class="kad kosong" hidden>
+            <h3>Tiada Rekod Dijumpai</h3>
+            <p id="rekodKosongTeks">Belum ada rekod lawatan.</p>
+          </div>
+
+          <div class="muat-lagi">
+            <span id="infoRekod" class="cap-masa"></span>
+            <button type="button" class="btn btn-garis" id="btnLagi" hidden>Muatkan lagi</button>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <!-- ================= KAKI ================= -->
+  <footer class="kaki">
+    <div class="bekas">
+      <span><strong>Pejabat Pendidikan Daerah Limbang</strong> © <span id="tahun"></span></span>
+      <span>Sistem Pengurusan Lawatan Sekolah &amp; Pemantauan Maklumbalas</span>
+    </div>
+  </footer>
+
+  <!-- ================= DIALOG: LOG MASUK ================= -->
+  <dialog id="dialogLogMasuk" class="kecil" aria-labelledby="tajukLogMasuk">
+    <div class="dialog-kepala">
+      <h2 id="tajukLogMasuk">Log Masuk Sistem</h2>
+      <button type="button" class="dialog-tutup" data-tutup aria-label="Tutup">×</button>
+    </div>
+    <div class="dialog-isi">
+      <div id="mesej" class="mesej" role="alert" hidden></div>
+
+      <div class="tab-peranan" role="tablist" aria-label="Jenis pengguna">
+        <button type="button" role="tab" id="tabSekolah" aria-selected="true" aria-controls="panelSekolah">Sekolah</button>
+        <button type="button" role="tab" id="tabAdmin" aria-selected="false" aria-controls="panelAdmin">Admin PPD</button>
+      </div>
+
+      <!-- SEKOLAH: emel rasmi sahaja -->
+      <section id="panelSekolah" role="tabpanel" aria-labelledby="tabSekolah">
+        <form id="borangSekolah" class="tindanan" novalidate>
+          <label class="medan">
+            <span>Emel Rasmi Sekolah <span class="wajib">*</span></span>
+            <input class="input" type="email" id="emelSekolah" name="email" autocomplete="email" inputmode="email" required maxlength="254" placeholder="Cth: yba5101@moe.edu.my">
+          </label>
+          <p class="nota">Log masuk sekolah hanya memerlukan emel rasmi sekolah yang didaftarkan oleh PPD.</p>
+          <button type="submit" class="btn btn-utama btn-penuh" id="btnLogMasukSekolah">Log Masuk Sekolah</button>
+        </form>
+      </section>
+
+      <!-- PENTADBIR: emel rasmi + kata laluan -->
+      <section id="panelAdmin" role="tabpanel" aria-labelledby="tabAdmin" hidden>
+        <form id="borangAdmin" class="tindanan" novalidate>
+          <label class="medan">
+            <span>Emel Rasmi Admin PPD <span class="wajib">*</span></span>
+            <input class="input" type="email" id="emelAdmin" name="username" autocomplete="username" inputmode="email" required maxlength="254" placeholder="nama@moe.gov.my">
+          </label>
+          <label class="medan">
+            <span>Kata Laluan <span class="wajib">*</span></span>
+            <input class="input" type="password" id="kataLaluan" name="password" autocomplete="current-password" required maxlength="128">
+          </label>
+          <button type="submit" class="btn btn-utama btn-penuh" id="btnLogMasukAdmin">Log Masuk Admin</button>
+        </form>
+      </section>
+    </div>
+  </dialog>
+
+  <!-- ================= DIALOG: GAMBAR ================= -->
+  <dialog id="dialogGambar" class="lightbox" aria-label="Paparan gambar">
+    <button type="button" class="dialog-tutup" data-tutup aria-label="Tutup">×</button>
+    <img id="gambarBesar" alt="">
+    <p id="kapsyenGambar"></p>
+  </dialog>
+
+  <!-- ================= TEMPLAT CETAKAN A4 ================= -->
+  <div id="cetakan" aria-hidden="true"></div>
 </body>
 </html>

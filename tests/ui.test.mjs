@@ -66,6 +66,8 @@ test('log masuk sekolah dengan emel sahaja dan isi maklumbalas', async (t) => {
   const page = await halamanBaru(t);
   if (!page) return;
   await page.goto(`${ASAL}/index.html`);
+  await page.click('#btnBukaLogMasuk');
+  await page.waitForSelector('#dialogLogMasuk[open]');
 
   // Emel tidak sah
   await page.fill('#emelSekolah', 'bukan-emel');
@@ -259,19 +261,20 @@ test('emel pentadbir atau sekolah tidak aktif ditolak di tab sekolah; tanpa sesi
   const page = await halamanBaru(t);
   if (!page) return;
   await page.goto(`${ASAL}/app.html`);
-  await page.waitForURL('**/index.html');
+  await page.waitForURL('**/index.html?log-masuk=1');
+  await page.waitForSelector('#dialogLogMasuk[open]');
 
   await page.fill('#emelSekolah', 'pentadbir@moe.gov.my');
   await page.click('#btnLogMasukSekolah');
   await page.waitForFunction(() => /tidak didaftarkan/.test(document.querySelector('#mesej').textContent));
-  assert.ok(page.url().endsWith('/index.html'));
+  assert.ok(page.url().includes('/index.html'));
   assert.ok(!(await panggilan(page)).some((x) => x.op === 'verifyOtp'), 'tiada sesi dicipta untuk emel pentadbir');
 
   await page.evaluate(() => { window.__PALSU.db.sekolah[0].aktif = false; });
   await page.fill('#emelSekolah', 'yba0001@moe.edu.my');
   await page.click('#btnLogMasukSekolah');
   await page.waitForFunction(() => /dinyahaktifkan/.test(document.querySelector('#mesej').textContent));
-  assert.ok(page.url().endsWith('/index.html'));
+  assert.ok(page.url().includes('/index.html'));
   assert.deepEqual(page.ralat, []);
 });
 
@@ -316,5 +319,102 @@ test('pentadbir menukar kata laluan sendiri; log audit memaparkan log masuk', as
   // Log audit memaparkan log masuk sekolah
   await page.click('#navTab [data-paparan="audit"]');
   await page.waitForFunction(() => /Akaun — Log masuk sekolah[\s\S]*SK Limbang · IP 203\.0\.113\.5/.test(document.querySelector('#jadualAudit').textContent));
+  assert.deepEqual(page.ralat, []);
+});
+
+test('laman utama awam: semua rekod dipapar tanpa log masuk, borang dikunci', async (t) => {
+  const page = await halamanBaru(t);
+  if (!page) return;
+  await page.goto(`${ASAL}/index.html`);
+  await page.waitForSelector('#senaraiRekod article');
+
+  // Rekod, statistik dan gambar dipaparkan kepada orang awam.
+  assert.equal(await page.textContent('#statJumlah'), '1');
+  assert.equal(await page.textContent('#statMenunggu'), '1');
+  assert.equal(await page.textContent('#statSelesai'), '0');
+  const kad = await page.innerHTML('#senaraiRekod');
+  assert.ok(kad.includes('SK Limbang'), 'nama sekolah daripada sekolah_awam');
+  assert.ok(kad.includes('YBA0001'));
+  assert.ok(kad.includes('&lt;script&gt;'), 'teks dapatan di-escape');
+  assert.ok(!kad.includes('<b>bin</b>'), 'nama pegawai di-escape');
+  assert.ok(!kad.includes('yba0001@moe.edu.my'), 'emel sekolah tidak dipaparkan');
+  assert.equal(await page.locator('#senaraiRekod .gambar-kecil img').count(), 1);
+  assert.equal(await page.locator('#senaraiRekod a[href="app.html"]').count(), 0, 'tiada butang kemaskini untuk orang awam');
+
+  // Borang dikunci; log masuk diperlukan.
+  assert.equal(await page.isVisible('#btnBukaLogMasuk'), true);
+  assert.equal(await page.isVisible('#lencanaPengguna'), false);
+  assert.equal(await page.isDisabled('.borang-pratonton input >> nth=0'), true);
+  assert.match(await page.textContent('#kunciTajuk'), /Log masuk untuk mengisi/);
+  assert.match(await page.textContent('#jamMasa'), /\d/);
+
+  // Lightbox gambar
+  await page.click('#senaraiRekod .gambar-kecil');
+  await page.waitForSelector('#dialogGambar[open]');
+  assert.match(await page.textContent('#kapsyenGambar'), /Gambar dapatan #1 — SK Limbang/);
+  await page.click('#dialogGambar [data-tutup]');
+
+  // Cetak A4 dan eksport CSV tersedia untuk orang awam.
+  await page.evaluate(() => { window.print = () => { window.__dicetak = true; }; });
+  await page.click('#senaraiRekod [data-tindakan="cetak"]');
+  await page.waitForFunction(() => window.__dicetak === true);
+  assert.match(await page.textContent('#cetakan'), /SK Limbang[\s\S]*BAHAGIAN A/);
+  const [muatTurun] = await Promise.all([page.waitForEvent('download'), page.click('#btnEksport')]);
+  const csv = await readFile(await muatTurun.path(), 'utf8');
+  assert.ok(csv.includes('"SK Limbang"'));
+  assert.ok(!csv.includes('@moe.edu.my'));
+
+  // Penapis status
+  await page.click('.stat-selesai');
+  await page.waitForFunction(() => !document.querySelector('#rekodKosong').hidden);
+  await page.click('.stat-jumlah');
+  await page.waitForSelector('#senaraiRekod article');
+
+  // Butang 'Isi sekarang' dan '+ Rekod Lawatan Baru' membuka log masuk.
+  await page.click('#senaraiRekod [data-buka-log-masuk]');
+  await page.waitForSelector('#dialogLogMasuk[open]');
+  assert.equal(await page.isVisible('#panelSekolah'), true);
+  await page.click('#dialogLogMasuk [data-tutup]');
+  await page.click('#btnRekodBaru');
+  await page.waitForSelector('#dialogLogMasuk[open]');
+
+  // Orang awam tidak menulis apa-apa.
+  const p = await panggilan(page);
+  assert.ok(!p.some((x) => x.jenis === 'db' && x.op !== 'select'), 'tiada penulisan pangkalan data');
+  assert.ok(p.some((x) => x.jenis === 'rpc' && x.nama === 'sekolah_awam'));
+  assert.ok(!p.some((x) => x.jenis === 'db' && x.jadual === 'sekolah'), 'jadual sekolah (dengan emel) tidak dibaca');
+  assert.deepEqual(page.ralat, []);
+});
+
+test('sesi pentadbir lama tidak mengganggu log masuk sekolah (laman utama)', async (t) => {
+  const page = await halamanBaru(t);
+  if (!page) return;
+  await page.goto(`${ASAL}/index.html?tab=admin`);
+  await page.waitForSelector('#panelAdmin:not([hidden])');
+  await page.fill('#emelAdmin', 'pentadbir@moe.gov.my');
+  await page.fill('#kataLaluan', 'KataLaluan123');
+  await Promise.all([page.waitForURL('**/app.html'), page.click('#btnLogMasukAdmin')]);
+  await page.waitForSelector('#utama:not([hidden])');
+
+  // Kembali ke laman utama: masih log masuk sebagai pentadbir, TIDAK dihantar ke app.html.
+  await page.click('#pautanLaman');
+  await page.waitForURL('**/index.html');
+  await page.waitForSelector('#lencanaPengguna:not([hidden])');
+  assert.equal(await page.textContent('#penggunaPeranan'), 'Admin PPD');
+  assert.equal(await page.locator('#senaraiRekod a[href="app.html"]').count() > 0, true, 'pentadbir boleh mengurus rekod');
+
+  // Log masuk sebagai sekolah dari laman utama -> sesi pentadbir ditamatkan dahulu.
+  await page.evaluate(() => document.querySelector('#btnBukaLogMasuk').click());
+  await page.waitForSelector('#dialogLogMasuk[open]');
+  await page.fill('#emelSekolah', 'yba0001@moe.edu.my');
+  await Promise.all([page.waitForURL('**/app.html'), page.click('#btnLogMasukSekolah')]);
+  await page.waitForSelector('#utama:not([hidden])');
+  assert.equal(await page.textContent('#penggunaPeranan'), 'Sekolah');
+  assert.equal(await page.textContent('#penggunaNama'), 'SK Limbang');
+  assert.equal(await page.isVisible('#navTab'), false, 'bukan paparan pentadbir');
+  const p = await panggilan(page);
+  const iSignOut = p.findLastIndex((x) => x.op === 'signOut');
+  const iSekolah = p.findIndex((x) => x.body?.tindakan === 'log-masuk-sekolah');
+  assert.ok(iSignOut >= 0 && iSignOut < iSekolah, 'sesi lama ditamatkan sebelum log masuk sekolah');
   assert.deepEqual(page.ralat, []);
 });

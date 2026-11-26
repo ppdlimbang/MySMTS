@@ -26,11 +26,11 @@ for (const f of readdirSync(new URL('js/', WEB))) {
 
 // 2. Import/eksport
 const eksport = {};
-for (const f of ['klien.js', 'util.js']) {
+for (const f of ['klien.js', 'util.js', 'cetakan.js', 'log-masuk.js']) {
   const s = baca(`js/${f}`);
   eksport[f] = new Set([...s.matchAll(/export\s+(?:async\s+)?(?:const|function|let|class)\s+([A-Za-z_$][\w$]*)/g)].map((m) => m[1]));
 }
-for (const f of ['aplikasi.js', 'log-masuk.js']) {
+for (const f of ['aplikasi.js', 'log-masuk.js', 'laman.js', 'cetakan.js']) {
   const s = baca(`js/${f}`);
   for (const m of s.matchAll(/import\s*\{([^}]+)\}\s*from\s*'\.\/([\w-]+\.js)'/g)) {
     for (const nama of m[1].split(',').map((x) => x.trim()).filter(Boolean)) {
@@ -40,7 +40,7 @@ for (const f of ['aplikasi.js', 'log-masuk.js']) {
 }
 
 // 3. Rujukan ID
-const halaman = { 'aplikasi.js': 'app.html', 'log-masuk.js': 'index.html' };
+const halaman = { 'aplikasi.js': 'app.html', 'log-masuk.js': 'index.html', 'laman.js': 'index.html' };
 for (const [js, html] of Object.entries(halaman)) {
   const s = baca(`js/${js}`);
   const h = baca(html);

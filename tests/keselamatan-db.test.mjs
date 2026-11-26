@@ -126,14 +126,38 @@ test('migrasi memuatkan 17 sekolah dan menormalkan data', async () => {
   assert.equal(rek.rows[0].status, 'Menunggu Maklumbalas');
 });
 
-test('orang awam (anon) tidak boleh membaca atau menulis apa-apa', async () => {
-  for (const jadual of ['pentadbir', 'sekolah', 'rekod_lawatan', 'lampiran', 'log_audit']) {
+test('orang awam (anon) boleh membaca rekod sahaja; emel sekolah dan data dalaman kekal tertutup', async () => {
+  // Rekod & lampiran awam (lajur awam sahaja).
+  const r = await sebagai('anon', (tx) => tx.query(
+    'select id, sekolah_id, tarikh, masa, nama_pegawai, jawatan, dapatan, maklumbalas, status, dicipta_pada, dikemaskini_pada, maklumbalas_pada from public.rekod_lawatan order by tarikh'));
+  assert.deepEqual(r.rows.map((x) => x.id), [rekodA, rekodB]);
+  const l = await sebagai('anon', (tx) => tx.query('select id, rekod_id, jenis, laluan, dicipta_pada from public.lampiran'));
+  assert.equal(l.rows.length, 1);
+  await gagal(sebagai('anon', (tx) => tx.query('select dicipta_oleh from public.rekod_lawatan')), /permission denied/);
+  await gagal(sebagai('anon', (tx) => tx.query('select * from public.rekod_lawatan')), /permission denied/);
+  await gagal(sebagai('anon', (tx) => tx.query('select dimuat_naik_oleh from public.lampiran')), /permission denied/);
+
+  // Emel sekolah, pentadbir dan log audit tidak boleh dibaca.
+  for (const jadual of ['pentadbir', 'sekolah', 'log_audit']) {
     await gagal(sebagai('anon', (tx) => tx.query(`select * from public.${jadual}`)), /permission denied/);
   }
+  await gagal(sebagai('anon', (tx) => tx.query('select emel from public.sekolah')), /permission denied/);
+  const sek = await sebagai('anon', (tx) => tx.query('select * from public.sekolah_awam()'));
+  assert.equal(sek.rows.length, 17);
+  assert.deepEqual(Object.keys(sek.rows[0]).sort(), ['id', 'kod', 'nama']);
+  assert.ok(sek.rows.every((x) => !JSON.stringify(x).includes('@')), 'tiada emel didedahkan');
+
+  // Tiada penulisan.
+  await gagal(sebagai('anon', (tx) => tx.query(
+    `insert into public.rekod_lawatan (sekolah_id, tarikh, nama_pegawai, jawatan, dapatan) values ($1, '2026-01-01', 'Ab', 'Cd', 'x')`, [sekolahA])),
+  /permission denied/);
+  await gagal(sebagai('anon', (tx) => tx.query(`update public.rekod_lawatan set dapatan = 'x' where id = $1`, [rekodA])), /permission denied/);
+  await gagal(sebagai('anon', (tx) => tx.query('delete from public.rekod_lawatan where id = $1', [rekodA])), /permission denied/);
+  await gagal(sebagai('anon', (tx) => tx.query(`insert into public.lampiran (rekod_id, jenis, laluan) values ($1::uuid, 'dapatan', $1::text || '/dapatan/' || $2::text || '.jpg')`, [rekodA, randomUUID()])), /permission denied/);
+  await gagal(sebagai('anon', (tx) => tx.query('delete from public.lampiran')), /permission denied/);
   await gagal(sebagai('anon', (tx) => tx.query('select public.profil_saya()')), /permission denied/);
   await gagal(sebagai('anon', (tx) => tx.query(`select public.hantar_maklumbalas($1, 'x', 'Selesai')`, [rekodA])), /permission denied/);
-  const obj = await sebagai('anon', (tx) => tx.query(`select * from storage.objects`));
-  assert.equal(obj.rows.length, 0);
+  await gagal(sebagai('anon', (tx) => tx.query(`insert into storage.objects (bucket_id, name) values ('lampiran', $1)`, [`${rekodA}/dapatan/${randomUUID()}.jpg`])), /row-level security/);
 });
 
 test('profil_saya menentukan peranan daripada pangkalan data', async () => {
@@ -158,18 +182,26 @@ test('profil_saya menentukan peranan daripada pangkalan data', async () => {
 });
 
 test('pentadbir yang log masuk dengan OTP tiada akses pentadbir', async () => {
-  const n = await sebagai('adminOtp', (tx) => tx.query('select * from public.rekod_lawatan'));
-  assert.equal(n.rows.length, 0);
+  const u = await sebagai('adminOtp', (tx) => tx.query(`update public.rekod_lawatan set dapatan = 'diubah' where id = $1`, [rekodA]));
+  assert.equal(u.affectedRows, 0);
+  const s = await sebagai('adminOtp', (tx) => tx.query('select * from public.sekolah'));
+  assert.equal(s.rows.length, 0);
   await gagal(sebagai('adminOtp', (tx) => tx.query(
     `insert into public.rekod_lawatan (sekolah_id, tarikh, nama_pegawai, jawatan, dapatan) values ($1, '2026-01-01', 'Ab', 'Cd', 'x')`, [sekolahA])),
   /row-level security/);
 });
 
-test('pengguna tidak berdaftar tidak melihat sebarang data', async () => {
-  for (const jadual of ['pentadbir', 'sekolah', 'rekod_lawatan', 'lampiran', 'log_audit']) {
+test('pengguna tidak berdaftar hanya melihat data awam dan tidak boleh menulis', async () => {
+  for (const jadual of ['pentadbir', 'sekolah', 'log_audit']) {
     const r = await sebagai('orangLuar', (tx) => tx.query(`select * from public.${jadual}`));
     assert.equal(r.rows.length, 0, jadual);
   }
+  const r = await sebagai('orangLuar', (tx) => tx.query('select id from public.rekod_lawatan'));
+  assert.equal(r.rows.length, 2, 'rekod adalah awam');
+  const u = await sebagai('orangLuar', (tx) => tx.query(`update public.rekod_lawatan set dapatan = 'x' where id = $1`, [rekodA]));
+  assert.equal(u.affectedRows, 0);
+  const d = await sebagai('orangLuar', (tx) => tx.query('delete from public.lampiran'));
+  assert.equal(d.affectedRows, 0);
 });
 
 test('akaun didaftar sendiri atau belum disahkan tiada akses walaupun emel sepadan', async () => {
@@ -185,8 +217,10 @@ test('akaun didaftar sendiri atau belum disahkan tiada akses walaupun emel sepad
   tuntutan.daftarSendiri.email = EMEL.admin;
   const p = await sebagai('daftarSendiri', async (tx) => (await tx.query('select public.profil_saya() p')).rows[0].p);
   assert.equal(p.peranan, null);
-  const r = await sebagai('daftarSendiri', (tx) => tx.query('select * from public.rekod_lawatan'));
-  assert.equal(r.rows.length, 0);
+  const r = await sebagai('daftarSendiri', (tx) => tx.query(`update public.rekod_lawatan set dapatan = 'x' where id = $1`, [rekodA]));
+  assert.equal(r.affectedRows, 0);
+  const pen = await sebagai('daftarSendiri', (tx) => tx.query('select * from public.pentadbir'));
+  assert.equal(pen.rows.length, 0);
 });
 
 test('fungsi carian akaun hanya untuk service_role', async () => {
@@ -199,9 +233,9 @@ test('fungsi carian akaun hanya untuk service_role', async () => {
   assert.deepEqual(r.rows, [{ id: ID.skA, disediakan: true }]);
 });
 
-test('sekolah hanya melihat rekod dan maklumat sekolahnya sendiri', async () => {
-  const rekod = await sebagai('skA', (tx) => tx.query('select id from public.rekod_lawatan'));
-  assert.deepEqual(rekod.rows.map((r) => r.id), [rekodA]);
+test('sekolah melihat semua rekod (awam) tetapi hanya maklumat sekolahnya sendiri', async () => {
+  const rekod = await sebagai('skA', (tx) => tx.query('select id from public.rekod_lawatan order by tarikh'));
+  assert.deepEqual(rekod.rows.map((r) => r.id), [rekodA, rekodB]);
   const sek = await sebagai('skA', (tx) => tx.query('select id from public.sekolah'));
   assert.deepEqual(sek.rows.map((r) => r.id), [sekolahA]);
   const pen = await sebagai('skA', (tx) => tx.query('select * from public.pentadbir'));
@@ -253,8 +287,8 @@ test('jadual lampiran: sekolah hanya menambah/memadam gambar maklumbalas sendiri
   await gagal(sebagai('skA', (tx) => tx.query(`insert into public.lampiran (rekod_id, jenis, laluan) values ($1, 'maklumbalas', $2)`, [rekodA, laluan(rekodB, 'maklumbalas')])), /lampiran_laluan_sah/);
   const d = await sebagai('skA', (tx) => tx.query('delete from public.lampiran where id = $1', [lampiranAdminA]));
   assert.equal(d.affectedRows, 0, 'sekolah tidak boleh memadam gambar dapatan pegawai');
-  const b = await sebagai('skB', (tx) => tx.query('select * from public.lampiran'));
-  assert.equal(b.rows.length, 0);
+  const b = await sebagai('skB', (tx) => tx.query('delete from public.lampiran where id = $1', [lampiranAdminA]));
+  assert.equal(b.affectedRows, 0, 'sekolah lain tidak boleh memadam gambar');
 });
 
 test('had 10 gambar bagi setiap bahagian', async () => {
@@ -286,10 +320,12 @@ test('storan: polisi baca, muat naik dan padam objek mengikut peranan', async ()
   await gagal(sebagai('skA', (tx) => tx.query(`insert into storage.objects (bucket_id, name, owner_id) values ('lampiran', $1, $2)`, [`${rekodB}/maklumbalas/${randomUUID()}.jpg`, ID.skA])), /row-level security/);
   await gagal(sebagai('skA', (tx) => tx.query(`insert into storage.objects (bucket_id, name, owner_id) values ('lampiran', $1, $2)`, [`../${rekodA}/maklumbalas/x.jpg`, ID.skA])), /row-level security/);
   await gagal(sebagai('admin', (tx) => tx.query(`insert into storage.objects (bucket_id, name, owner_id) values ('lampiran', $1, $2)`, [`${randomUUID()}/dapatan/${randomUUID()}.jpg`, ID.admin])), /row-level security/);
-  const b = await sebagai('skB', (tx) => tx.query(`select * from storage.objects`));
-  assert.equal(b.rows.length, 0, 'sekolah lain tidak boleh melihat gambar');
-  const luar = await sebagai('orangLuar', (tx) => tx.query(`select * from storage.objects`));
-  assert.equal(luar.rows.length, 0);
+  const awam = await sebagai('anon', (tx) => tx.query(`select name from storage.objects where bucket_id = 'lampiran'`));
+  assert.deepEqual(awam.rows.map((x) => x.name), [objAdmin], 'gambar boleh dibaca umum (URL bertandatangan)');
+  const b = await sebagai('skB', (tx) => tx.query('delete from storage.objects where name = $1', [objAdmin]));
+  assert.equal(b.affectedRows, 0, 'sekolah lain tidak boleh memadam gambar');
+  const anonPadam = await sebagai('anon', (tx) => tx.query('delete from storage.objects where name = $1', [objAdmin]));
+  assert.equal(anonPadam.affectedRows, 0, 'orang awam tidak boleh memadam gambar');
   await gagal(sebagai('orangLuar', (tx) => tx.query(`insert into storage.objects (bucket_id, name, owner_id) values ('lampiran', $1, $2)`, [`${rekodA}/maklumbalas/${randomUUID()}.jpg`, ID.orangLuar])), /row-level security/);
 });
 
@@ -298,8 +334,8 @@ test('sekolah yang dinyahaktifkan hilang akses serta-merta', async () => {
     await tx.query('update public.sekolah set aktif = false where id = $1', [sekolahA]);
     await tx.query(`select set_config('request.jwt.claims', $1, true)`, [JSON.stringify(tuntutan.skA)]);
     await tx.exec('set local role authenticated');
-    const r = await tx.query('select * from public.rekod_lawatan');
-    assert.equal(r.rows.length, 0);
+    const s = await tx.query('select * from public.sekolah');
+    assert.equal(s.rows.length, 0);
     const p = await tx.query('select public.profil_saya() p');
     assert.equal(p.rows[0].p.peranan, null);
     await tx.rollback();

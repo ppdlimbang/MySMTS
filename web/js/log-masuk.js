@@ -1,7 +1,9 @@
+// Tetingkap log masuk pada laman utama (Sekolah: emel sahaja; Admin PPD: emel + kata laluan).
 import { sb, konfigSah, dapatkanProfil, logMasukSekolah } from './klien.js';
-import { $, EMEL_SAH, normalEmel, mesejRalat, setSibuk, paparMesej, IKON_LOGO } from './util.js';
+import { $, $$, EMEL_SAH, normalEmel, mesejRalat, setSibuk, paparMesej } from './util.js';
 
 const el = {
+  dialog: $('#dialogLogMasuk'),
   mesej: $('#mesej'),
   tabSekolah: $('#tabSekolah'),
   tabAdmin: $('#tabAdmin'),
@@ -16,8 +18,7 @@ const el = {
   btnLogMasukAdmin: $('#btnLogMasukAdmin'),
 };
 
-$('#logo').innerHTML = IKON_LOGO;
-$('#tahun').textContent = String(new Date().getFullYear());
+const TIDAK_BERDAFTAR = 'Emel ini tidak didaftarkan atau telah dinyahaktifkan. Hubungi pentadbir PPD.';
 
 function mesej(teks, jenis = 'ralat') {
   paparMesej(el.mesej, teks, jenis);
@@ -33,15 +34,26 @@ function pilihTab(peranan) {
   (sekolah ? el.emelSekolah : el.emelAdmin).focus();
 }
 
+/** Buka tetingkap log masuk. */
+export function bukaLogMasuk(peranan = 'sekolah', teks = '', jenis = 'info') {
+  if (!el.dialog.open) el.dialog.showModal();
+  pilihTab(peranan);
+  if (teks) mesej(teks, jenis);
+}
+
 /** Ralat dengan mesej mesra pengguna (dipaparkan terus). */
 function ralatMesra(teks) {
   return Object.assign(new Error(teks), { mesra: true });
 }
 
-const TIDAK_BERDAFTAR = 'Emel ini tidak didaftarkan atau telah dinyahaktifkan. Hubungi pentadbir PPD.';
-
-function keAplikasi() {
-  window.location.replace('app.html');
+/**
+ * Tamatkan sesi sedia ada dalam pelayar ini sebelum log masuk baharu, supaya
+ * log masuk sebagai sekolah tidak tersangkut pada sesi pentadbir terdahulu
+ * (atau sebaliknya).
+ */
+async function tamatkanSesiLama() {
+  const { data } = await sb.auth.getSession();
+  if (data.session) await sb.auth.signOut({ scope: 'local' });
 }
 
 /** Sahkan peranan selepas log masuk; log keluar jika tidak dibenarkan. */
@@ -60,10 +72,10 @@ async function semakSelepasLogMasuk(peranDijangka) {
   if (peranDijangka === 'sekolah' && profil?.peranan !== 'sekolah') {
     await sb.auth.signOut();
     throw ralatMesra(profil?.admin_perlu_kata_laluan
-      ? 'Emel ini ialah akaun pentadbir. Sila log masuk melalui tab "Pentadbir PPD" menggunakan kata laluan.'
+      ? 'Emel ini ialah akaun pentadbir. Sila log masuk melalui tab "Admin PPD" menggunakan kata laluan.'
       : TIDAK_BERDAFTAR);
   }
-  keAplikasi();
+  window.location.replace('app.html');
 }
 
 // ---------- Sekolah ----------
@@ -79,6 +91,7 @@ el.borangSekolah.addEventListener('submit', async (e) => {
   }
   setSibuk(el.btnLogMasukSekolah, true, 'Log masuk…');
   try {
+    await tamatkanSesiLama();
     const hasil = await logMasukSekolah(emel);
     if (hasil !== 'ok') throw ralatMesra(TIDAK_BERDAFTAR);
     await semakSelepasLogMasuk('sekolah');
@@ -107,6 +120,7 @@ el.borangAdmin.addEventListener('submit', async (e) => {
   }
   setSibuk(el.btnLogMasukAdmin, true, 'Log masuk…');
   try {
+    await tamatkanSesiLama();
     const { error } = await sb.auth.signInWithPassword({ email: emel, password: kataLaluan });
     if (error) throw error;
     el.kataLaluan.value = '';
@@ -121,30 +135,22 @@ el.borangAdmin.addEventListener('submit', async (e) => {
 
 el.tabSekolah.addEventListener('click', () => pilihTab('sekolah'));
 el.tabAdmin.addEventListener('click', () => pilihTab('admin'));
+$$('[data-buka-log-masuk]').forEach((b) => b.addEventListener('click', () => bukaLogMasuk()));
+$$('[data-tutup]', el.dialog).forEach((b) => b.addEventListener('click', () => el.dialog.close()));
+el.dialog.addEventListener('close', () => {
+  el.kataLaluan.value = '';
+  mesej('');
+});
 
-async function mula() {
+function mula() {
   if (!konfigSah) {
-    $('#ralatKonfig').hidden = false;
-    document.querySelectorAll('form button, form input').forEach((x) => { x.disabled = true; });
+    document.querySelectorAll('#dialogLogMasuk form button, #dialogLogMasuk form input').forEach((x) => { x.disabled = true; });
     return;
   }
   const param = new URLSearchParams(window.location.search);
-  if (param.get('tab') === 'admin') pilihTab('admin');
-  if (param.get('sebab') === 'tamat') mesej('Sesi anda telah tamat. Sila log masuk semula.', 'info');
-
-  const { data } = await sb.auth.getSession();
-  if (data.session) {
-    try {
-      const profil = await dapatkanProfil();
-      if (profil?.peranan) {
-        keAplikasi();
-        return;
-      }
-      await sb.auth.signOut({ scope: 'local' });
-    } catch {
-      await sb.auth.signOut({ scope: 'local' });
-    }
-  }
+  if (param.get('sebab') === 'tamat') bukaLogMasuk('sekolah', 'Sesi anda telah tamat. Sila log masuk semula.');
+  else if (param.get('tab') === 'admin') bukaLogMasuk('admin');
+  else if (param.has('log-masuk')) bukaLogMasuk();
 }
 
 mula();

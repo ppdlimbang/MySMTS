@@ -1,9 +1,10 @@
-import { sb, konfigSah, dapatkanProfil, tetapKataLaluanPentadbir, BALDI, KONFIG } from './klien.js';
+import { sb, konfigSah, dapatkanProfil, tetapKataLaluanPentadbir, BALDI } from './klien.js';
 import {
   $, $$, esc, formatTarikh, formatMasa, formatCapMasa, tarikhHariIni, masaSekarang, STATUS, kelasStatus,
   toast, mesejRalat, setSibuk, paparMesej, mampatGambar, muatTurun, selCsv, sahkan, bersihCarian,
   EMEL_SAH, normalEmel, IKON_LOGO, semakKekuatanKataLaluan,
 } from './util.js';
+import { isiCetakan, cetakBekas } from './cetakan.js';
 
 const SAIZ_HALAMAN = 20;
 const MAKS_GAMBAR = 10;
@@ -45,7 +46,7 @@ function ralatPemuat(teks, denganPautan = true) {
 }
 
 function keLogMasuk(sebab) {
-  window.location.replace(sebab ? `index.html?sebab=${encodeURIComponent(sebab)}` : 'index.html');
+  window.location.replace(sebab ? `index.html?sebab=${encodeURIComponent(sebab)}` : 'index.html?log-masuk=1');
 }
 
 async function mula() {
@@ -96,6 +97,12 @@ async function mula() {
   if (!keadaan.admin) $('#navTab').hidden = true;
 
   await muatRekod();
+
+  // Dari butang '+ Rekod Lawatan Baru' di laman utama.
+  if (keadaan.admin && new URLSearchParams(window.location.search).has('baru')) {
+    history.replaceState(null, '', 'app.html');
+    bukaBorangRekod(null);
+  }
 }
 
 function paparPengguna() {
@@ -119,7 +126,7 @@ function pasangPeristiwa() {
     logKeluarSendiri = true;
     setSibuk($('#btnKeluar'), true);
     await sb.auth.signOut();
-    keLogMasuk();
+    window.location.replace('index.html');
   });
 
   $$('#navTab [data-paparan]').forEach((b) => b.addEventListener('click', () => tukarPaparan(b.dataset.paparan)));
@@ -269,6 +276,7 @@ function namaSekolah(id) {
 
 function terapPenapis(q, denganStatus) {
   const p = keadaan.penapis;
+  if (!keadaan.admin) q = q.eq('sekolah_id', keadaan.profil?.sekolah?.id ?? '00000000-0000-0000-0000-000000000000');
   if (denganStatus && p.status !== 'SEMUA') q = q.eq('status', p.status);
   if (p.sekolahId) q = q.eq('sekolah_id', p.sekolahId);
   if (p.dari) q = q.gte('tarikh', p.dari);
@@ -807,50 +815,13 @@ async function cetakRekod(rekod, butang) {
   setSibuk(butang, true);
   try {
     await sediakanUrlGambar(rekod.lampiran.map((l) => l.laluan));
-    const namaSek = rekod.sekolah?.nama || namaSekolah(rekod.sekolah_id) || '-';
-    const galeri = (jenis, label) => {
-      const senarai = rekod.lampiran.filter((l) => l.jenis === jenis && urlGambar(l.laluan));
-      if (!senarai.length) return '';
-      return `<div class="gambar"><p>${esc(label)}</p><div>${senarai.map((l) => `<img src="${esc(urlGambar(l.laluan))}" alt="">`).join('')}</div></div>`;
-    };
     const c = $('#cetakan');
-    c.innerHTML = `
-      <div class="cetak-kepala">
-        <div class="organisasi">${esc(KONFIG.namaOrganisasi.toUpperCase())}</div>
-        <div class="negeri">Sarawak, Malaysia</div>
-        <h2>BORANG MAKLUMBALAS DAN TINDAKAN SEKOLAH</h2>
-        <p>Rekod dapatan lawatan pegawai PPD dan maklumbalas pihak sekolah</p>
-      </div>
-      <table class="cetak-jadual">
-        <tr><td class="l">NAMA SEKOLAH</td><td colspan="3"><strong>${esc(namaSek)}</strong>${rekod.sekolah?.kod ? ` (${esc(rekod.sekolah.kod)})` : ''}</td></tr>
-        <tr><td class="l">TARIKH LAWATAN</td><td>${esc(formatTarikh(rekod.tarikh))}</td><td class="l">MASA LAWATAN</td><td>${esc(formatMasa(rekod.masa) || '-')}</td></tr>
-        <tr><td class="l">NAMA PEGAWAI</td><td colspan="3">${esc(rekod.nama_pegawai)}</td></tr>
-        <tr><td class="l">JAWATAN PEGAWAI</td><td colspan="3">${esc(rekod.jawatan)}</td></tr>
-      </table>
-      <div class="cetak-bahagian">
-        <div class="tajuk">BAHAGIAN A: DAPATAN &amp; TEGURAN PEGAWAI PPD</div>
-        <div class="isi">${esc(rekod.dapatan)}</div>
-        ${galeri('dapatan', 'Lampiran gambar dapatan pegawai:')}
-      </div>
-      <div class="cetak-bahagian">
-        <div class="tajuk">BAHAGIAN B: MAKLUMBALAS &amp; TINDAKAN PIHAK SEKOLAH <span>${esc(rekod.status.toUpperCase())}</span></div>
-        <div class="isi">${esc(rekod.maklumbalas || '(Belum ada maklumbalas daripada pihak sekolah)')}</div>
-        ${galeri('maklumbalas', 'Lampiran gambar bukti pihak sekolah:')}
-      </div>
-      <div class="cetak-tandatangan">
-        <div><strong>Disediakan oleh (Pegawai PPD):</strong><div class="ruang"></div><div class="garis"><strong>${esc(rekod.nama_pegawai.toUpperCase())}</strong><br>${esc(rekod.jawatan)}</div></div>
-        <div><strong>Disahkan oleh (Pihak Sekolah):</strong><div class="ruang"></div><div class="garis"><strong>( Tandatangan &amp; Cop Rasmi )</strong><br>Pengetua / Guru Besar</div></div>
-      </div>
-      <div class="cetak-kaki">
-        <span>Dicetak daripada MySMTS — ${esc(KONFIG.namaOrganisasi)}</span>
-        <span>Tarikh cetakan: ${esc(formatCapMasa(new Date().toISOString()))}</span>
-      </div>`;
-    const imej = $$('img', c);
-    await Promise.race([
-      Promise.all(imej.map((img) => (img.complete ? null : new Promise((r) => { img.onload = r; img.onerror = r; })))),
-      new Promise((r) => setTimeout(r, 10000)),
-    ]);
-    window.print();
+    isiCetakan(c, rekod, {
+      namaSekolah: rekod.sekolah?.nama || namaSekolah(rekod.sekolah_id) || '-',
+      kodSekolah: rekod.sekolah?.kod,
+      urlGambar,
+    });
+    await cetakBekas(c);
   } catch (err) {
     toast(mesejRalat(err, 'Dokumen tidak dapat disediakan untuk cetakan.'), 'ralat');
   } finally {

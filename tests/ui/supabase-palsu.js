@@ -155,6 +155,7 @@
     async rpc(nama, arg) {
       catat({ jenis: 'rpc', nama, arg });
       if (nama === 'profil_saya') return { data: P.profil, error: null };
+      if (nama === 'sekolah_awam') return { data: P.db.sekolah.map(({ id, nama: n, kod }) => ({ id, nama: n, kod })), error: null };
       if (nama === 'hantar_maklumbalas') {
         const r = P.db.rekod_lawatan.find((x) => x.id === arg.p_rekod_id);
         if (!r) return { data: null, error: { code: 'P0001', message: 'Rekod tidak dijumpai.' } };
