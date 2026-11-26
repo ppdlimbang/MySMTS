@@ -20,3 +20,6 @@ coverage/
 *.log
 Thumbs.db
 .DS_Store
+
+# Konteks Claude Code (setempat sahaja)
+CLAUDE.md

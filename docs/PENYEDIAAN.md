@@ -36,9 +36,9 @@ supabase link --project-ref naejrcjjighsppfeqecm
 supabase db push
 ```
 
-## 3. Daftar pentadbir pertama
+## 3. Daftar pentadbir
 
-Pentadbir pertama perlu disediakan sekali sahaja melalui papan pemuka Supabase, kerana sistem tidak menghantar emel.
+Pentadbir didaftarkan melalui papan pemuka Supabase (aplikasi tidak mempunyai halaman pengurusan pentadbir). Ulang langkah ini bagi setiap pentadbir.
 
 1. **SQL Editor**: daftarkan emel dan nama pentadbir.
 
@@ -57,11 +57,11 @@ Pentadbir pertama perlu disediakan sekali sahaja melalui papan pemuka Supabase, 
    where lower(email) = 'nama.pegawai@moe.gov.my' and email_confirmed_at is not null;
    ```
 
-Pentadbir seterusnya ditambah melalui tab **Pentadbir** dalam aplikasi, dan kata laluan mereka ditetapkan dengan butang **Kata laluan** pada baris mereka.
+Selepas log masuk, pentadbir boleh menukar kata laluan sendiri melalui butang **Kata laluan** di bahagian atas aplikasi.
 
 ## 4. Terbitkan fungsi Edge `sediakan-akaun`
 
-Fungsi ini (a) membenarkan sekolah aktif log masuk dengan emel sahaja dan merekodkan log masuk itu, dan (b) membenarkan pentadbir menetapkan kata laluan pentadbir. Ia menggunakan kunci rahsia pelayan yang tidak pernah sampai ke pelayar.
+Fungsi ini (a) membenarkan sekolah aktif log masuk dengan emel sahaja dan merekodkan log masuk itu, dan (b) membenarkan pentadbir menukar kata laluan sendiri. Ia menggunakan kunci rahsia pelayan yang tidak pernah sampai ke pelayar.
 
 ```bash
 npx supabase login
@@ -128,13 +128,13 @@ Hasilnya (boleh disemak di **Authentication → Sign In / Providers** dan **URL 
 
 ## 9. Operasi harian
 
-- **Sekolah baharu atau emel sekolah bertukar:** kemas kini di tab **Sekolah**. Akses mengikut emel baharu berkuat kuasa serta-merta.
+- **Sekolah baharu atau emel sekolah bertukar:** kemas kini di tab **Sekolah**. Akses mengikut emel baharu berkuat kuasa serta-merta. Akaun log masuk sekolah (di **Authentication → Users**) hanya dicipta secara automatik semasa sekolah itu log masuk kali pertama.
 - **Sekolah tidak lagi digunakan:** klik **Nyahaktif**. Rekod dikekalkan dan akses ditarik balik serta-merta.
-- **Pentadbir bertukar jawatan:** nyahaktifkan atau padam di tab **Pentadbir**. Sistem sentiasa mengekalkan sekurang-kurangnya seorang pentadbir aktif.
-- **Pentadbir lupa kata laluan:** pentadbir lain klik **Kata laluan** pada baris mereka di tab **Pentadbir**. Jika tiada pentadbir lain, ulang langkah 3 (bahagian Add user) di papan pemuka Supabase.
+- **Pentadbir bertukar jawatan:** di **SQL Editor**, jalankan `update public.pentadbir set aktif = false where emel = '...';` (atau `delete`). Sistem sentiasa mengekalkan sekurang-kurangnya seorang pentadbir aktif.
+- **Pentadbir lupa kata laluan:** di **Authentication → Users**, padam akaun tersebut, kemudian ulang langkah 3 (bahagian 2 dan 3) dengan kata laluan baharu.
 - **Disyaki penyalahgunaan log masuk sekolah:** semak tab **Log Audit** (Akaun — Log masuk sekolah). Nyahaktifkan sekolah tersebut serta-merta jika perlu.
 - **Laporan:** gunakan **Eksport CSV**, yang mengikut penapis semasa, atau **Cetak A4** bagi setiap rekod.
-- **Siasatan:** tab **Log Audit** menunjukkan siapa mengubah apa dan bila, serta setiap log masuk sekolah dan penetapan kata laluan.
+- **Siasatan:** tab **Log Audit** menunjukkan siapa mengubah apa dan bila, serta setiap log masuk sekolah dan pertukaran kata laluan.
 
 ## 10. Kemas kini sistem
 

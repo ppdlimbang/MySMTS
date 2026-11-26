@@ -247,9 +247,8 @@ test('pentadbir: log masuk kata laluan, CRUD rekod, cetak, eksport dan pengurusa
   await page.click('dialog.kecil [data-jawapan="ya"]');
   await page.waitForFunction(() => [...document.querySelectorAll('.toast-ralat')].some((x) => /masih digunakan/.test(x.textContent)));
 
-  // Pentadbir & audit
-  await page.click('#navTab [data-paparan="pentadbir"]');
-  await page.waitForFunction(() => document.querySelector('#jadualPentadbir').textContent.includes('(anda)'));
+  // Tiada halaman Pentadbir; log audit
+  assert.equal(await page.$('#navTab [data-paparan="pentadbir"]'), null, 'halaman Pentadbir telah dibuang');
   await page.click('#navTab [data-paparan="audit"]');
   await page.waitForFunction(() => /status: Menunggu Maklumbalas → Selesai/.test(document.querySelector('#jadualAudit').textContent));
 
@@ -276,7 +275,7 @@ test('emel pentadbir atau sekolah tidak aktif ditolak di tab sekolah; tanpa sesi
   assert.deepEqual(page.ralat, []);
 });
 
-test('pentadbir menetapkan kata laluan sendiri dan pentadbir lain; log audit memaparkan log masuk', async (t) => {
+test('pentadbir menukar kata laluan sendiri; log audit memaparkan log masuk', async (t) => {
   const page = await halamanBaru(t);
   if (!page) return;
   await page.goto(`${ASAL}/index.html?tab=admin`);
@@ -286,7 +285,6 @@ test('pentadbir menetapkan kata laluan sendiri dan pentadbir lain; log audit mem
   await Promise.all([page.waitForURL('**/app.html'), page.click('#btnLogMasukAdmin')]);
   await page.waitForSelector('#btnKataLaluanSaya:not([hidden])');
   await page.evaluate(() => {
-    window.__PALSU.db.pentadbir.push({ emel: 'pegawai2@moe.gov.my', nama: 'Pegawai Dua', aktif: true, dicipta_pada: '2026-11-02T00:00:00Z' });
     window.__PALSU.db.log_audit.unshift({ id: 2, pada: '2026-11-21T01:00:00Z', emel: 'yba0001@moe.edu.my', jadual: 'auth',
       tindakan: 'LOG MASUK', data_lama: null, data_baru: { sekolah: 'SK Limbang', ip: '203.0.113.5' } });
   });
@@ -312,17 +310,8 @@ test('pentadbir menetapkan kata laluan sendiri dan pentadbir lain; log audit mem
   assert.equal(await page.evaluate(() => window.__PALSU.kataLaluan['pentadbir@moe.gov.my']), 'KataLaluanKuat2026');
   assert.equal(await page.inputValue('#klBaharu'), '', 'medan dikosongkan selepas ditutup');
 
-  // Tetapkan kata laluan pentadbir lain dari tab Pentadbir
-  await page.click('#navTab [data-paparan="pentadbir"]');
-  await page.click('#jadualPentadbir tr:has-text("Pegawai Dua") [data-tindakan="kata-laluan"]');
-  await page.waitForSelector('#dialogKataLaluan[open]');
-  assert.match(await page.textContent('#tajukKataLaluan'), /Tetapkan kata laluan pentadbir/);
-  await page.fill('#klBaharu', 'PegawaiDua2026x');
-  await page.fill('#klSahkan', 'PegawaiDua2026x');
-  await page.click('#btnSimpanKataLaluan');
-  await page.waitForFunction(() => [...document.querySelectorAll('.toast-berjaya')].some((x) => /pegawai2@moe\.gov\.my telah ditetapkan/.test(x.textContent)));
   const fn = (await panggilan(page)).filter((x) => x.body?.tindakan === 'tetap-kata-laluan').map((x) => x.body.emel);
-  assert.deepEqual(fn, ['pentadbir@moe.gov.my', 'pegawai2@moe.gov.my']);
+  assert.deepEqual(fn, ['pentadbir@moe.gov.my']);
 
   // Log audit memaparkan log masuk sekolah
   await page.click('#navTab [data-paparan="audit"]');

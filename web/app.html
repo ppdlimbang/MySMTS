@@ -47,7 +47,6 @@
     <div class="bekas" role="tablist">
       <button type="button" role="tab" data-paparan="rekod" aria-selected="true">Rekod Lawatan</button>
       <button type="button" role="tab" data-paparan="sekolah" aria-selected="false" data-admin hidden>Sekolah</button>
-      <button type="button" role="tab" data-paparan="pentadbir" aria-selected="false" data-admin hidden>Pentadbir</button>
       <button type="button" role="tab" data-paparan="audit" aria-selected="false" data-admin hidden>Log Audit</button>
     </div>
   </nav>
@@ -138,23 +137,6 @@
           <table class="jadual">
             <thead><tr><th>Nama sekolah</th><th>Kod</th><th>Emel rasmi (log masuk)</th><th>Status</th><th class="sr-only">Tindakan</th></tr></thead>
             <tbody id="jadualSekolah"></tbody>
-          </table>
-        </div>
-      </section>
-
-      <!-- ================= PENTADBIR (PENTADBIR) ================= -->
-      <section id="paparan-pentadbir" data-paparan-panel="pentadbir" hidden>
-        <div class="tajuk-bahagian">
-          <div>
-            <h2>Pentadbir PPD</h2>
-            <p>Pentadbir baharu menetapkan kata laluan sendiri melalui "Tetapkan / lupa kata laluan?" di halaman log masuk.</p>
-          </div>
-          <button type="button" class="btn btn-emas" id="btnPentadbirBaru">+ Tambah pentadbir</button>
-        </div>
-        <div class="kad jadual-balut">
-          <table class="jadual">
-            <thead><tr><th>Nama</th><th>Emel rasmi</th><th>Status</th><th>Didaftarkan</th><th class="sr-only">Tindakan</th></tr></thead>
-            <tbody id="jadualPentadbir"></tbody>
           </table>
         </div>
       </section>
@@ -326,37 +308,11 @@
     </form>
   </dialog>
 
-  <!-- ================= DIALOG: PENTADBIR ================= -->
-  <dialog id="dialogPentadbir" class="kecil" aria-labelledby="tajukPentadbir">
-    <form id="borangPentadbir" novalidate>
-      <div class="dialog-kepala">
-        <h2 id="tajukPentadbir">Pentadbir</h2>
-        <button type="button" class="dialog-tutup" data-tutup aria-label="Tutup">×</button>
-      </div>
-      <div class="dialog-isi">
-        <div id="mesejPentadbir" class="mesej" role="alert" hidden></div>
-        <label class="medan">
-          <span>Nama penuh <span class="wajib">*</span></span>
-          <input class="input" type="text" id="pNama" required minlength="2" maxlength="120" autocomplete="off">
-        </label>
-        <label class="medan">
-          <span>Emel rasmi <span class="wajib">*</span></span>
-          <input class="input" type="email" id="pEmel" required maxlength="254" autocomplete="off" placeholder="nama@moe.gov.my">
-        </label>
-        <label class="kotak-semak"><input type="checkbox" id="pAktif" checked> Aktif</label>
-      </div>
-      <div class="dialog-kaki">
-        <button type="button" class="btn btn-garis" data-tutup>Batal</button>
-        <button type="submit" class="btn btn-utama" id="btnSimpanPentadbir">Simpan</button>
-      </div>
-    </form>
-  </dialog>
-
-  <!-- ================= DIALOG: KATA LALUAN PENTADBIR ================= -->
+  <!-- ================= DIALOG: KATA LALUAN SAYA ================= -->
   <dialog id="dialogKataLaluan" class="kecil" aria-labelledby="tajukKataLaluan">
     <form id="borangKataLaluan" novalidate>
       <div class="dialog-kepala">
-        <h2 id="tajukKataLaluan">Tetapkan kata laluan</h2>
+        <h2 id="tajukKataLaluan">Tukar kata laluan saya</h2>
         <button type="button" class="dialog-tutup" data-tutup aria-label="Tutup">×</button>
       </div>
       <div class="dialog-isi">

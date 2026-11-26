@@ -186,7 +186,7 @@
         }
         if (body.tindakan === 'tetap-kata-laluan') {
           if (P.profil?.peranan !== 'admin') return gagal(403, 'Hanya pentadbir boleh menetapkan kata laluan.');
-          if (!P.db.pentadbir.some((x) => x.emel === body.emel)) return gagal(400, 'Emel ini bukan pentadbir berdaftar.');
+          if (body.emel !== P.profil.emel) return gagal(403, 'Anda hanya boleh menukar kata laluan anda sendiri.');
           P.kataLaluan = { ...(P.kataLaluan || {}), [body.emel]: body.kata_laluan };
           return { data: { ok: true }, error: null };
         }

@@ -21,7 +21,6 @@ const keadaan = {
   profil: null,
   admin: false,
   sekolah: [],
-  pentadbir: [],
   penapis: { carian: '', status: 'SEMUA', sekolahId: '', dari: '', hingga: '' },
   halaman: 0,
   jumlah: 0,
@@ -204,15 +203,8 @@ function pasangPeristiwa() {
   $('#jadualSekolah').addEventListener('click', klikJadualSekolah);
   $('#borangSekolah').addEventListener('submit', simpanSekolah);
 
-  // Pentadbir
-  $('#btnPentadbirBaru').addEventListener('click', () => bukaBorangPentadbir(null));
-  $('#jadualPentadbir').addEventListener('click', klikJadualPentadbir);
-  $('#borangPentadbir').addEventListener('submit', simpanPentadbir);
-
-  // Kata laluan pentadbir
-  $('#btnKataLaluanSaya').addEventListener('click', () => bukaBorangKataLaluan({
-    emel: keadaan.profil.emel, nama: keadaan.profil.nama,
-  }));
+  // Kata laluan sendiri (pentadbir)
+  $('#btnKataLaluanSaya').addEventListener('click', bukaBorangKataLaluan);
   $('#borangKataLaluan').addEventListener('submit', simpanKataLaluan);
   $('#dialogKataLaluan').addEventListener('close', () => {
     $('#klBaharu').value = '';
@@ -233,7 +225,6 @@ function tukarPaparan(nama) {
     paparSekolah();
     muatSekolah().then(paparSekolah).catch((e) => toast(mesejRalat(e), 'ralat'));
   }
-  if (nama === 'pentadbir') muatPentadbir();
   if (nama === 'audit') muatAudit(true);
   if (nama === 'rekod') muatRekod(true);
 }
@@ -1034,134 +1025,12 @@ async function klikJadualSekolah(e) {
 }
 
 // =====================================================================
-// Pengurusan pentadbir
+// Kata laluan pentadbir (tiada emel dihantar; pentadbir menukar sendiri)
 // =====================================================================
 
-let pentadbirDiedit = null;
-
-async function muatPentadbir() {
-  const tb = $('#jadualPentadbir');
-  tb.innerHTML = '<tr><td colspan="5" class="redup">Memuatkan…</td></tr>';
-  const { data, error } = await sb.from('pentadbir').select('emel,nama,aktif,dicipta_pada').order('nama');
-  if (error) {
-    tb.innerHTML = `<tr><td colspan="5">${esc(mesejRalat(error))}</td></tr>`;
-    return;
-  }
-  keadaan.pentadbir = data;
-  tb.innerHTML = data.map((p) => {
-    const diri = p.emel === keadaan.profil.emel;
-    return `
-      <tr>
-        <td><strong>${esc(p.nama)}</strong>${diri ? ' <span class="redup">(anda)</span>' : ''}</td>
-        <td>${esc(p.emel)}</td>
-        <td><span class="lencana ${p.aktif ? 'lencana-aktif' : 'lencana-tidak-aktif'}">${p.aktif ? 'Aktif' : 'Tidak aktif'}</span></td>
-        <td>${esc(formatCapMasa(p.dicipta_pada))}</td>
-        <td><div class="tindakan-sel">
-          <button type="button" class="btn btn-garis btn-kecil" data-tindakan="edit" data-emel="${esc(p.emel)}">Kemaskini</button>
-          <button type="button" class="btn btn-garis btn-kecil" data-tindakan="kata-laluan" data-emel="${esc(p.emel)}">Kata laluan</button>
-          ${diri ? '' : `<button type="button" class="btn btn-garis btn-kecil" data-tindakan="togol" data-emel="${esc(p.emel)}">${p.aktif ? 'Nyahaktif' : 'Aktifkan'}</button>
-          <button type="button" class="btn btn-bahaya-garis btn-kecil" data-tindakan="padam" data-emel="${esc(p.emel)}">Padam</button>`}
-        </div></td>
-      </tr>`;
-  }).join('');
-}
-
-function bukaBorangPentadbir(p) {
-  pentadbirDiedit = p;
-  paparMesej($('#mesejPentadbir'), '');
-  $('#tajukPentadbir').textContent = p ? 'Kemaskini pentadbir' : 'Tambah pentadbir';
-  $('#pNama').value = p?.nama || '';
-  $('#pEmel').value = p?.emel || '';
-  $('#pEmel').readOnly = Boolean(p);
-  $('#pAktif').checked = p ? p.aktif : true;
-  $('#pAktif').disabled = Boolean(p && p.emel === keadaan.profil.emel);
-  $('#dialogPentadbir').showModal();
-  $('#pNama').focus();
-}
-
-async function simpanPentadbir(e) {
-  e.preventDefault();
-  const m = $('#mesejPentadbir');
-  const nama = $('#pNama').value.trim().replace(/\s+/g, ' ');
-  const emel = normalEmel($('#pEmel').value);
-  const aktif = $('#pAktif').checked;
-  if (nama.length < 2) return paparMesej(m, 'Sila isi nama penuh.');
-  if (!EMEL_SAH.test(emel)) return paparMesej(m, 'Format emel tidak sah.');
-
-  const btn = $('#btnSimpanPentadbir');
-  setSibuk(btn, true, 'Menyimpan…');
-  try {
-    const q = pentadbirDiedit
-      ? sb.from('pentadbir').update({ nama, aktif }).eq('emel', pentadbirDiedit.emel).select('emel')
-      : sb.from('pentadbir').insert({ emel, nama, aktif }).select('emel');
-    const { data, error } = await q;
-    if (error) throw error;
-    if (!data?.length) throw Object.assign(new Error(''), { code: '42501' });
-    $('#dialogPentadbir').close();
-    toast(pentadbirDiedit
-      ? 'Maklumat pentadbir dikemas kini.'
-      : 'Pentadbir ditambah. Klik "Kata laluan" pada baris mereka untuk menetapkan kata laluan pertama, kemudian maklumkan kepada mereka secara peribadi.',
-    'berjaya', pentadbirDiedit ? 4500 : 9000);
-    await muatPentadbir();
-  } catch (err) {
-    paparMesej(m, mesejRalat(err));
-  } finally {
-    setSibuk(btn, false);
-  }
-}
-
-async function klikJadualPentadbir(e) {
-  const b = e.target.closest('[data-tindakan]');
-  if (!b) return;
-  const p = keadaan.pentadbir.find((x) => x.emel === b.dataset.emel);
-  if (!p) return;
-  if (b.dataset.tindakan === 'edit') {
-    bukaBorangPentadbir(p);
-    return;
-  }
-  if (b.dataset.tindakan === 'kata-laluan') {
-    bukaBorangKataLaluan(p);
-    return;
-  }
-  if (p.emel === keadaan.profil.emel) return;
-  if (b.dataset.tindakan === 'togol') {
-    const { data, error } = await sb.from('pentadbir').update({ aktif: !p.aktif }).eq('emel', p.emel).select('emel');
-    if (error || !data?.length) {
-      toast(mesejRalat(error || { code: '42501' }), 'ralat');
-      return;
-    }
-    toast(p.aktif ? 'Pentadbir dinyahaktifkan.' : 'Pentadbir diaktifkan.', 'berjaya');
-    await muatPentadbir();
-    return;
-  }
-  if (b.dataset.tindakan === 'padam') {
-    const ya = await sahkan({
-      tajuk: 'Padam pentadbir?',
-      mesej: `${p.nama} (${p.emel}) tidak lagi mempunyai akses pentadbir.`,
-      teksYa: 'Padam',
-    });
-    if (!ya) return;
-    const { data, error } = await sb.from('pentadbir').delete().eq('emel', p.emel).select('emel');
-    if (error || !data?.length) {
-      toast(mesejRalat(error || { code: '42501' }), 'ralat');
-      return;
-    }
-    toast('Pentadbir dipadam.', 'berjaya');
-    await muatPentadbir();
-  }
-}
-
-// =====================================================================
-// Kata laluan pentadbir (tiada emel dihantar; ditetapkan oleh pentadbir)
-// =====================================================================
-
-let sasaranKataLaluan = null;
-
-function bukaBorangKataLaluan(p) {
-  sasaranKataLaluan = p.emel;
-  const diri = p.emel === keadaan.profil.emel;
+function bukaBorangKataLaluan() {
+  const p = keadaan.profil;
   paparMesej($('#mesejKataLaluan'), '');
-  $('#tajukKataLaluan').textContent = diri ? 'Tukar kata laluan saya' : 'Tetapkan kata laluan pentadbir';
   $('#sasaranKataLaluan').textContent = p.nama ? `${p.nama} (${p.emel})` : p.emel;
   $('#klNamaPengguna').value = p.emel;
   $('#klBaharu').value = '';
@@ -1188,12 +1057,9 @@ async function simpanKataLaluan(e) {
   const btn = $('#btnSimpanKataLaluan');
   setSibuk(btn, true, 'Menyimpan…');
   try {
-    await tetapKataLaluanPentadbir(sasaranKataLaluan, baharu);
+    await tetapKataLaluanPentadbir(keadaan.profil.emel, baharu);
     $('#dialogKataLaluan').close();
-    toast(sasaranKataLaluan === keadaan.profil.emel
-      ? 'Kata laluan anda telah ditukar.'
-      : `Kata laluan untuk ${sasaranKataLaluan} telah ditetapkan. Maklumkan kepada pentadbir tersebut secara peribadi.`,
-    'berjaya', 7000);
+    toast('Kata laluan anda telah ditukar.', 'berjaya', 7000);
   } catch (err) {
     paparMesej(m, mesejRalat(err));
   } finally {

@@ -10,12 +10,12 @@
 
 | Peranan | Cara log masuk | Akses |
 |---|---|---|
-| **Pentadbir PPD** | Emel rasmi + kata laluan | Cipta, kemas kini dan padam rekod lawatan; urus senarai sekolah dan pentadbir; lihat log audit; eksport CSV |
+| **Pentadbir PPD** | Emel rasmi + kata laluan | Cipta, kemas kini dan padam rekod lawatan; urus senarai sekolah; lihat log audit; eksport CSV; tukar kata laluan sendiri |
 | **Sekolah** | Emel rasmi sekolah sahaja (tiada kod, tiada kata laluan) | Lihat rekod sekolah sendiri sahaja; isi maklumbalas, status dan gambar bukti (Bahagian B) |
 
 Hanya emel yang didaftarkan oleh pentadbir boleh log masuk. Pendaftaran awam dimatikan. Sistem tidak menghantar emel.
 
-> Oleh kerana sekolah log masuk dengan emel sahaja, sesiapa yang mengetahui emel rasmi sekolah boleh log masuk sebagai sekolah itu. Setiap log masuk sekolah direkodkan dalam Log Audit (masa, IP, pelayar). Kata laluan pentadbir ditetapkan oleh pentadbir lain melalui tab **Pentadbir**.
+> Oleh kerana sekolah log masuk dengan emel sahaja, sesiapa yang mengetahui emel rasmi sekolah boleh log masuk sebagai sekolah itu. Setiap log masuk sekolah direkodkan dalam Log Audit (masa, IP, pelayar). Pentadbir didaftarkan melalui papan pemuka Supabase (lihat panduan penyediaan) dan menukar kata laluan sendiri dalam aplikasi.
 
 ## Keselamatan
 
@@ -33,12 +33,12 @@ Hanya emel yang didaftarkan oleh pentadbir boleh log masuk. Pendaftaran awam dim
 ```
 web/                         Laman yang diterbitkan ke GitHub Pages
   index.html                 Log masuk (sekolah: emel sahaja, pentadbir: kata laluan)
-  app.html                   Aplikasi utama (rekod, sekolah, pentadbir, log audit)
+  app.html                   Aplikasi utama (rekod, sekolah, log audit)
   js/  css/  img/  vendor/
   config.example.js          Templat konfigurasi (config.js dijana semasa deploy)
 supabase/
   migrations/                Skema, RLS, storan, audit, senarai awal sekolah
-  functions/sediakan-akaun/  Fungsi Edge: log masuk sekolah (emel sahaja) dan kata laluan pentadbir
+  functions/sediakan-akaun/  Fungsi Edge: log masuk sekolah (emel sahaja) dan tukar kata laluan pentadbir
 tests/                       Ujian keselamatan pangkalan data dan ujian antara muka
 .github/workflows/           Uji, kemudian terbit ke GitHub Pages
 ```

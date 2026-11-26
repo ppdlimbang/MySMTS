@@ -10,9 +10,10 @@
 //     Emel pentadbir tidak pernah diterima di sini. Setiap log masuk
 //     direkodkan dalam log_audit (masa, IP, pelayar).
 //
-//  2. "tetap-kata-laluan": pentadbir (sesi kata laluan) menetapkan kata
-//     laluan bagi dirinya atau pentadbir lain yang berdaftar. Peranan
-//     pemanggil disahkan oleh pangkalan data melalui profil_saya().
+//  2. "tetap-kata-laluan": pentadbir (sesi kata laluan) menukar kata
+//     laluannya SENDIRI. Peranan pemanggil disahkan oleh pangkalan data
+//     melalui profil_saya(). Pentadbir tidak boleh menukar kata laluan
+//     pentadbir lain; itu dibuat di papan pemuka Supabase.
 //
 // Pembolehubah persekitaran:
 //   SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY (automatik)
@@ -147,7 +148,7 @@ async function logMasukSekolah({ req, cors, badan }: Konteks): Promise<Response>
 }
 
 // ---------------------------------------------------------------------
-// 2. Pentadbir menetapkan kata laluan pentadbir
+// 2. Pentadbir menukar kata laluan sendiri
 // ---------------------------------------------------------------------
 
 function semakKekuatan(k: string): string {
@@ -177,6 +178,9 @@ async function tetapKataLaluan({ req, cors, badan }: Konteks): Promise<Response>
   const sasaran = normalEmel(badan.emel);
   const kataLaluan = String(badan.kata_laluan ?? '');
   if (!EMEL_SAH.test(sasaran)) return json({ ralat: 'Format emel tidak sah.' }, 400, cors);
+  if (sasaran !== normalEmel(profil.emel)) {
+    return json({ ralat: 'Anda hanya boleh menukar kata laluan anda sendiri.' }, 403, cors);
+  }
   const masalah = semakKekuatan(kataLaluan);
   if (masalah) return json({ ralat: masalah }, 400, cors);
 
