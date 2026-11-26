@@ -162,7 +162,7 @@ test('sekolah: log masuk dengan emel sahaja, kekal di laman utama dan isi maklum
   assert.deepEqual(page.ralat, []);
 });
 
-test('admin: log masuk kekal di laman utama; cipta, kemaskini, padam, cetak, eksport, sekolah dan audit', async (t) => {
+test('admin: log masuk kekal di laman utama; cipta, kemaskini, padam, cetak laporan, sekolah dan audit', async (t) => {
   const page = await halamanBaru(t);
   if (!page) return;
   await page.goto(`${ASAL}/index.html?tab=admin`);
@@ -231,15 +231,17 @@ test('admin: log masuk kekal di laman utama; cipta, kemaskini, padam, cetak, eks
   await page.waitForSelector('#btnBatalEdit', { state: 'hidden' });
   assert.match(await page.textContent('#tajukBorang'), /Borang Rekod Lawatan Baru/);
 
-  // Cetak & eksport
+  // Cetak laporan
   await page.evaluate(() => { window.print = () => { window.__dicetak = true; }; });
   await page.click(`${kad('SK Limbang')} [data-tindakan="cetak"]`);
   await page.waitForFunction(() => window.__dicetak === true);
   assert.match(await page.textContent('#cetakan'), /SK Limbang[\s\S]*BAHAGIAN A[\s\S]*Dapatan dikemas kini/);
-  const [muatTurun] = await Promise.all([page.waitForEvent('download'), page.click('#btnEksport')]);
-  const csv = await readFile(await muatTurun.path(), 'utf8');
-  assert.ok(csv.startsWith('﻿"Nama Sekolah"'));
-  assert.equal(csv.trim().split('\r\n').length, 4);
+  assert.match(await page.textContent('#cetakan .cl-kepala'), /BORANG MAKLUMBALAS & TINDAKAN SEKOLAH/);
+  assert.equal(await page.locator('#cetakan .cl-logo svg').count(), 1, 'logo sistem dalam laporan');
+  assert.equal(await page.locator('#cetakan .cl-foto').count(), 0, 'gambar dapatan telah dibuang');
+  assert.equal(await page.locator('#cetakan .cl-tiada-gambar').count(), 2);
+  assert.match(await page.textContent('#cetakan .cl-b'), /BAHAGIAN B[\s\S]*Tarikh Tindakan/);
+  assert.equal(await page.textContent(`${kad('SK Limbang')} [data-tindakan="cetak"]`), 'Cetak Laporan');
 
   // Padam rekod
   await page.click(`${kad('Pn. Rohana')} [data-tindakan="padam"]`);
@@ -364,9 +366,9 @@ test('laman awam: semua rekod dipapar tanpa log masuk, borang dikunci', async (t
   await page.evaluate(() => { window.print = () => { window.__dicetak = true; }; });
   await page.click(`${kad('SK Limbang')} [data-tindakan="cetak"]`);
   await page.waitForFunction(() => window.__dicetak === true);
-  const [muatTurun] = await Promise.all([page.waitForEvent('download'), page.click('#btnEksport')]);
-  const csv = await readFile(await muatTurun.path(), 'utf8');
-  assert.ok(csv.includes('"SK Limbang"') && !csv.includes('@moe.edu.my'));
+  assert.equal(await page.locator('#cetakan .cl-a .cl-foto').count(), 1, 'gambar dapatan dicetak dalam laporan');
+  assert.match(await page.textContent('#cetakan .cl-foto figcaption'), /FOTO 01\s*Bukti Dapatan Lawatan/);
+  assert.equal(await page.$('#btnEksport'), null);
 
   await page.click('.stat-selesai');
   await page.waitForFunction(() => document.querySelectorAll('#senaraiRekod article').length === 1);

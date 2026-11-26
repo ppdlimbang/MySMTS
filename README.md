@@ -10,7 +10,7 @@
 
 | Peranan | Cara log masuk | Akses |
 |---|---|---|
-| **Pentadbir PPD** | Emel rasmi + kata laluan | Cipta, kemas kini dan padam rekod lawatan; urus senarai sekolah; lihat log audit; eksport CSV; tukar kata laluan sendiri |
+| **Pentadbir PPD** | Emel rasmi + kata laluan | Cipta, kemas kini dan padam rekod lawatan; urus senarai sekolah; lihat log audit; cetak laporan; tukar kata laluan sendiri |
 | **Sekolah** | Emel rasmi sekolah sahaja (tiada kod, tiada kata laluan) | Lihat rekod sekolah sendiri sahaja; isi maklumbalas, status dan gambar bukti (Bahagian B) |
 
 Semua rekod lawatan boleh dilihat oleh orang awam tanpa log masuk (emel sekolah tidak didedahkan). Mengisi atau mengubah rekod memerlukan log masuk. Hanya emel yang didaftarkan oleh pentadbir boleh log masuk. Pendaftaran awam dimatikan. Sistem tidak menghantar emel.

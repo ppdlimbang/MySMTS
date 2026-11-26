@@ -218,27 +218,6 @@ export async function mampatGambar(fail, maks = 1280, kualiti = 0.72) {
   return blob;
 }
 
-// ---------- Fail ----------
-
-export function muatTurun(kandungan, namaFail, jenis) {
-  const blob = kandungan instanceof Blob ? kandungan : new Blob([kandungan], { type: jenis });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = namaFail;
-  document.body.append(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
-
-/** Sel CSV selamat: petik, gandakan petikan, halang suntikan formula Excel. */
-export function selCsv(nilai) {
-  let s = String(nilai ?? '').replace(/\r\n|\r|\n/g, ' ');
-  if (/^[=+\-@\t]/.test(s)) s = `'${s}`;
-  return `"${s.replace(/"/g, '""')}"`;
-}
-
 // ---------- Dialog pengesahan ----------
 
 /** Papar dialog pengesahan; selesai dengan true/false. */

@@ -133,7 +133,7 @@ Hasilnya (boleh disemak di **Authentication → Sign In / Providers** dan **URL 
 - **Pentadbir bertukar jawatan:** di **SQL Editor**, jalankan `update public.pentadbir set aktif = false where emel = '...';` (atau `delete`). Sistem sentiasa mengekalkan sekurang-kurangnya seorang pentadbir aktif.
 - **Pentadbir lupa kata laluan:** di **Authentication → Users**, padam akaun tersebut, kemudian ulang langkah 3 (bahagian 2 dan 3) dengan kata laluan baharu.
 - **Disyaki penyalahgunaan log masuk sekolah:** semak tab **Log Audit** (Akaun — Log masuk sekolah). Nyahaktifkan sekolah tersebut serta-merta jika perlu.
-- **Laporan:** gunakan **Eksport CSV**, yang mengikut penapis semasa, atau **Cetak A4** bagi setiap rekod.
+- **Laporan:** gunakan **Cetak Laporan** pada setiap rekod untuk mencetak atau menyimpan laporan A4 (PDF).
 - **Siasatan:** tab **Log Audit** menunjukkan siapa mengubah apa dan bila, serta setiap log masuk sekolah dan pertukaran kata laluan.
 
 ## 10. Kemas kini sistem

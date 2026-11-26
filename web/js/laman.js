@@ -7,7 +7,7 @@
 import { sb, konfigSah, dapatkanProfil, tetapKataLaluanPentadbir, BALDI } from './klien.js';
 import {
   $, $$, esc, formatTarikh, formatMasa, formatCapMasa, tarikhHariIni, masaSekarang, STATUS, kelasStatus,
-  toast, mesejRalat, setSibuk, paparMesej, mampatGambar, muatTurun, selCsv, sahkan, bersihCarian,
+  toast, mesejRalat, setSibuk, paparMesej, mampatGambar, sahkan, bersihCarian,
   EMEL_SAH, normalEmel, IKON_LOGO, semakKekuatanKataLaluan, alamatLaman,
 } from './util.js';
 import { isiCetakan, cetakBekas } from './cetakan.js';
@@ -291,7 +291,7 @@ function paparRekod() {
         </div>
         <div class="rekod-kaki">
           ${butangUrus}
-          <button type="button" class="btn btn-garis btn-kecil" data-tindakan="cetak" data-id="${esc(r.id)}">Cetak A4</button>
+          <button type="button" class="btn btn-garis btn-kecil" data-tindakan="cetak" data-id="${esc(r.id)}">Cetak Laporan</button>
           <span class="cap-masa kanan">${r.maklumbalas_pada ? `Maklumbalas: ${esc(formatCapMasa(r.maklumbalas_pada))}` : `Direkod: ${esc(formatCapMasa(r.dicipta_pada))}`}</span>
           ${admin() ? `<button type="button" class="btn btn-bahaya-garis btn-kecil" data-tindakan="padam" data-id="${esc(r.id)}">Padam</button>` : ''}
         </div>
@@ -743,7 +743,7 @@ async function padamRekod(rekod) {
 }
 
 // =====================================================================
-// Cetakan A4 & eksport CSV
+// Cetak laporan (A4)
 // =====================================================================
 
 async function cetakRekod(rekod, butang) {
@@ -760,47 +760,6 @@ async function cetakRekod(rekod, butang) {
   }
 }
 
-async function eksportCsv() {
-  const btn = $('#btnEksport');
-  setSibuk(btn, true, 'Mengeksport…');
-  try {
-    const semua = [];
-    const SAIZ = 1000;
-    for (let dari = 0; dari < 100000; dari += SAIZ) {
-      const { data, error } = await terapPenapis(sb.from('rekod_lawatan').select(
-        'id,sekolah_id,tarikh,masa,nama_pegawai,jawatan,dapatan,maklumbalas,status,dicipta_pada,maklumbalas_pada,lampiran(jenis)',
-      ), true)
-        .order('tarikh', { ascending: false })
-        .order('id', { ascending: true })
-        .range(dari, dari + SAIZ - 1);
-      if (error) throw error;
-      semua.push(...data);
-      if (data.length < SAIZ) break;
-    }
-    if (!semua.length) {
-      toast('Tiada rekod untuk dieksport.', 'amaran');
-      return;
-    }
-    const kepala = [
-      'Nama Sekolah', 'Kod Sekolah', 'Tarikh Lawatan', 'Masa Lawatan', 'Nama Pegawai', 'Jawatan Pegawai',
-      'Dapatan Pegawai', 'Bil. Gambar Dapatan', 'Maklumbalas Sekolah', 'Bil. Gambar Bukti', 'Status Tindakan',
-      'Tarikh Maklumbalas', 'Tarikh Direkod',
-    ];
-    const baris = semua.map((r) => [
-      namaSekolah(r.sekolah_id), kodSekolah(r.sekolah_id), r.tarikh, formatMasa(r.masa), r.nama_pegawai, r.jawatan, r.dapatan,
-      (r.lampiran || []).filter((l) => l.jenis === 'dapatan').length,
-      r.maklumbalas, (r.lampiran || []).filter((l) => l.jenis === 'maklumbalas').length,
-      r.status, r.maklumbalas_pada ? formatCapMasa(r.maklumbalas_pada) : '', formatCapMasa(r.dicipta_pada),
-    ].map(selCsv).join(','));
-    const csv = `﻿${[kepala.map(selCsv).join(','), ...baris].join('\r\n')}`;
-    muatTurun(csv, `MySMTS_PPD_Limbang_${tarikhHariIni()}.csv`, 'text/csv;charset=utf-8');
-    toast(`${semua.length} rekod dieksport.`, 'berjaya');
-  } catch (err) {
-    toast(mesejRalat(err, 'Eksport gagal. Sila cuba lagi.'), 'ralat');
-  } finally {
-    setSibuk(btn, false);
-  }
-}
 
 // =====================================================================
 // Tab admin: Sekolah & Log Audit
@@ -1059,7 +1018,6 @@ function pasangPeristiwa() {
   $('#penapisStatus').addEventListener('change', () => tetapStatus($('#penapisStatus').value));
   $$('.stat').forEach((b) => b.addEventListener('click', () => tetapStatus(b.dataset.status)));
   $('#btnLagi').addEventListener('click', () => muatRekod({ tambah: true }));
-  $('#btnEksport').addEventListener('click', eksportCsv);
   $('#senaraiRekod').addEventListener('click', klikSenaraiRekod);
 
   // Borang kiri
