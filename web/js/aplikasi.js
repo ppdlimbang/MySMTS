@@ -1058,6 +1058,9 @@ async function simpanKataLaluan(e) {
   setSibuk(btn, true, 'Menyimpan…');
   try {
     await tetapKataLaluanPentadbir(keadaan.profil.emel, baharu);
+    // Kosongkan serta-merta (peristiwa 'close' berlaku secara tak segerak).
+    $('#klBaharu').value = '';
+    $('#klSahkan').value = '';
     $('#dialogKataLaluan').close();
     toast('Kata laluan anda telah ditukar.', 'berjaya', 7000);
   } catch (err) {
