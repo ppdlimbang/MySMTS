@@ -162,6 +162,9 @@ test('sekolah: log masuk dengan emel sahaja, kekal di laman utama dan isi maklum
   await page.waitForFunction(() => /Ditutup · Disahkan PPD/.test(document.querySelector('#senaraiRekod').textContent));
   assert.equal(await page.locator(`${kad('SK Limbang')} [data-tindakan="edit"]`).count(), 0, 'tiada butang kemaskini pada rekod ditutup');
   assert.match(await page.textContent(`${kad('SK Limbang')} .cap-masa`), /Disahkan PPD/);
+  assert.match(await page.textContent(`${kad('SK Limbang')} .nota-ditutup`), /ditutup oleh PPD/);
+  await page.waitForFunction(() => /telah disahkan dan ditutup oleh PPD/.test(document.querySelector('#kunciTeks').textContent));
+  assert.equal(await page.isVisible('#pilihRekodSekolah'), false, 'rekod ditutup dikeluarkan daripada pilihan borang');
 
   // Log keluar -> laman awam
   await page.click('#btnLogKeluar');
@@ -240,7 +243,8 @@ test('admin: log masuk kekal di laman utama; cipta, kemaskini, padam, cetak lapo
   assert.match(await page.textContent('#tajukBorang'), /Borang Rekod Lawatan Baru/);
 
   // PPD mengesahkan & menutup rekod yang dilaporkan selesai oleh sekolah, kemudian membuka semula.
-  assert.equal(await page.locator('[data-tindakan="tutup"]').count(), 1, 'butang Sahkan & Tutup hanya pada rekod Selesai');
+  assert.equal(await page.locator('[data-tindakan="tutup"]').count(), 3, 'butang Sahkan & Tutup pada setiap rekod terbuka');
+  assert.equal(await page.locator('[data-tindakan="tutup"].btn-hijau').count(), 1, 'diserlahkan pada rekod Selesai');
   await page.click(`${kad('Pn. Siti Aminah')} [data-tindakan="tutup"]`);
   await page.waitForSelector('dialog.kecil[open] [data-jawapan="ya"]');
   assert.match(await page.textContent('dialog.kecil[open]'), /sekolah tidak lagi boleh mengubah/);
@@ -254,20 +258,29 @@ test('admin: log masuk kekal di laman utama; cipta, kemaskini, padam, cetak lapo
   await page.waitForFunction(() => document.querySelector('#statDitutup').textContent === '0');
   assert.match(await page.textContent(`${kad('Pn. Siti Aminah')} .lencana`), /^Dalam Tindakan$/);
 
-  // Pengesahan PPD juga boleh dibuat dalam Bahagian A borang; Bahagian B hanya status sekolah.
-  assert.equal(await page.locator('#fStatus option[value="Ditutup"]').count(), 0, 'tiada pilihan PPD dalam Bahagian B');
+  // Borang: PPD mempunyai 3 pilihan status, tanpa "Ditutup" (penutupan melalui butang Sahkan & Tutup).
+  const opsAdmin = await page.$$eval('#fStatus option:not([disabled])', (o) => o.map((x) => x.value));
+  assert.deepEqual(opsAdmin, ['Menunggu Maklumbalas', 'Dalam Tindakan', 'Selesai']);
+  assert.equal(await page.$('#fPengesahan'), null, 'tiada medan pengesahan dalam Bahagian A');
+
+  // Kemaskini rekod yang telah ditutup tidak membukanya semula secara tidak sengaja.
   await page.click(`${kad('Pn. Siti Aminah')} .rekod-kaki [data-tindakan="edit"]`);
   await page.waitForFunction(() => document.querySelector('#fDapatan').value.includes('Pusat sumber'));
-  assert.equal(await page.inputValue('#fPengesahan'), 'Terbuka');
-  await page.selectOption('#fPengesahan', 'Ditutup');
+  await page.selectOption('#fStatus', 'Selesai');
   await page.click('#btnSimpanRekod');
   await page.waitForSelector('#btnBatalEdit', { state: 'hidden' });
+  await page.click(`${kad('Pn. Siti Aminah')} [data-tindakan="tutup"]`);
+  await page.click('dialog.kecil[open] [data-jawapan="ya"]');
   await page.waitForFunction(() => document.querySelector('#statDitutup').textContent === '1');
-  assert.match(await page.textContent(`${kad('Pn. Siti Aminah')} .lencana`), /Ditutup · Disahkan PPD/);
   await page.click(`${kad('Pn. Siti Aminah')} .rekod-kaki [data-tindakan="edit"]`);
-  await page.waitForFunction(() => document.querySelector('#fPengesahan').value === 'Ditutup');
-  assert.equal(await page.inputValue('#fStatus'), 'Selesai', 'Bahagian B kekal Selesai bagi rekod ditutup');
-  await page.click('#btnBatalEdit');
+  await page.waitForFunction(() => document.querySelector('#fDapatan').value.includes('Pusat sumber'));
+  assert.equal(await page.inputValue('#fStatus'), 'Selesai');
+  await page.fill('#fDapatan', 'Pusat sumber perlu diselenggara (disemak).');
+  await page.click('#btnSimpanRekod');
+  await page.waitForSelector('#btnBatalEdit', { state: 'hidden' });
+  await page.waitForFunction(() => /Ditutup · Disahkan PPD/.test(document.querySelector('#senaraiRekod').textContent));
+  const pKekal = await panggilan(page);
+  assert.equal(pKekal.filter((x) => x.jadual === 'rekod_lawatan' && x.op === 'update').at(-1).nilai.status, 'Ditutup', 'rekod kekal ditutup');
 
   // Cetak laporan
   await page.evaluate(() => { window.print = () => { window.__dicetak = true; }; });

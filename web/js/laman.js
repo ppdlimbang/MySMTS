@@ -180,8 +180,23 @@ async function muatRekod({ tambah = false } = {}) {
   paparRekod();
 }
 
+let masaMuatSemula = 0;
 async function muatSemula() {
+  masaMuatSemula = Date.now();
   await Promise.all([muatStatistik(), muatRekod(), muatRekodSaya()]);
+}
+
+/**
+ * Segarkan data apabila tab kembali aktif (cth. PPD menutup/membuka rekod dalam tab lain),
+ * supaya butang, pilihan rekod dan status sentiasa terkini. Tidak mengganggu borang yang sedang diisi.
+ */
+function segarApabilaKembali() {
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible') return;
+    if (Date.now() - masaMuatSemula < 5000) return;
+    if (borang?.ubah || borang?.menyimpan || borang?.memproses) return;
+    muatSemula();
+  });
 }
 
 /** Sekolah: senarai rekod lawatan sekolah sendiri untuk dipilih dalam borang. */
@@ -265,8 +280,12 @@ function paparRekod() {
     let butangUrus = '';
     if (admin()) {
       butangUrus = `<button type="button" class="btn btn-utama btn-kecil" data-tindakan="edit" data-id="${esc(r.id)}">Kemaskini / Isi Sekolah</button>`;
-      if (r.status === 'Selesai') butangUrus += `<button type="button" class="btn btn-hijau btn-kecil" data-tindakan="tutup" data-id="${esc(r.id)}">Sahkan &amp; Tutup</button>`;
-      if (r.status === 'Ditutup') butangUrus += `<button type="button" class="btn btn-garis btn-kecil" data-tindakan="buka" data-id="${esc(r.id)}">Buka Semula</button>`;
+      // Sentiasa ada satu butang PPD: "Sahkan & Tutup" (rekod terbuka) atau "Buka Semula" (rekod ditutup).
+      butangUrus += r.status === 'Ditutup'
+        ? `<button type="button" class="btn btn-garis btn-kecil" data-tindakan="buka" data-id="${esc(r.id)}">Buka Semula</button>`
+        : `<button type="button" class="btn ${r.status === 'Selesai' ? 'btn-hijau' : 'btn-garis-hijau'} btn-kecil" data-tindakan="tutup" data-id="${esc(r.id)}">Sahkan &amp; Tutup</button>`;
+    } else if (sekolahSaya() && sekolahSaya() === r.sekolah_id && r.status === 'Ditutup') {
+      butangUrus = '<span class="nota-ditutup">Disahkan &amp; ditutup oleh PPD · tidak boleh diubah</span>';
     } else if (bolehUrus(r)) {
       butangUrus = `<button type="button" class="btn btn-emas btn-kecil" data-tindakan="edit" data-id="${esc(r.id)}">${r.maklumbalas ? 'Kemaskini maklumbalas' : 'Isi maklumbalas'}</button>`;
     }
@@ -336,9 +355,11 @@ async function tukarStatusPpd(rekod, status, butang) {
   if (!admin()) return;
   const sekolah = namaSekolah(rekod.sekolah_id) || 'sekolah';
   const tutup = status === 'Ditutup';
+  const belumSelesai = rekod.status !== 'Selesai'
+    ? ` Perhatian: sekolah belum melaporkan tindakan selesai (status semasa: ${labelStatus(rekod.status)}).` : '';
   const ya = await sahkan(tutup ? {
     tajuk: 'Sahkan & tutup rekod ini?',
-    mesej: `Anda mengesahkan bahawa tindakan ${sekolah} bagi lawatan pada ${formatTarikh(rekod.tarikh)} telah selesai. Rekod akan ditutup dan sekolah tidak lagi boleh mengubah maklumbalas atau gambar bukti.`,
+    mesej: `Anda mengesahkan bahawa tindakan ${sekolah} bagi lawatan pada ${formatTarikh(rekod.tarikh)} telah selesai. Rekod akan ditutup dan sekolah tidak lagi boleh mengubah maklumbalas atau gambar bukti.${belumSelesai}`,
     teksYa: 'Ya, sahkan & tutup',
     bahaya: false,
   } : {
@@ -357,14 +378,20 @@ async function tukarStatusPpd(rekod, status, butang) {
   }
   if (borang?.rekod?.id === rekod.id) tetapBorang(null);
   toast(tutup ? 'Rekod disahkan dan ditutup.' : 'Rekod dibuka semula.', 'berjaya');
+  // Jika penapis status semasa akan menyembunyikan rekod ini, tunjuk semua rekod supaya ia kekal kelihatan.
+  if (keadaan.penapis.status !== 'SEMUA' && keadaan.penapis.status !== status) tandaPenapisStatus('SEMUA');
   await muatSemula();
 }
 
-function tetapStatus(status) {
+function tandaPenapisStatus(status) {
   keadaan.penapis.status = status;
   $('#penapisStatus').value = status;
   $$('.stat').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.status === status)));
-  muatRekod();
+}
+
+function tetapStatus(status) {
+  tandaPenapisStatus(status);
+  muatSemula();
 }
 
 function bukaGambar(url, kapsyen) {
@@ -417,7 +444,7 @@ function paparPanelBorang() {
   $('[data-boleh-tambah="maklumbalas"]').hidden = tunjukKunci;
   $('#wajibMaklumbalas').hidden = mod !== 'sekolah';
   $('#fMaklumbalas').required = mod === 'sekolah';
-  // Sekolah hanya memilih "Dalam Tindakan" atau "Selesai". Pengesahan PPD ("Ditutup") berada dalam Bahagian A.
+  // Sekolah hanya memilih "Dalam Tindakan" atau "Selesai". PPD menutup rekod melalui butang "Sahkan & Tutup".
   const opsMenunggu = $('#fStatus').querySelector('option[value="Menunggu Maklumbalas"]');
   opsMenunggu.hidden = mod === 'sekolah';
   opsMenunggu.disabled = mod === 'sekolah';
@@ -475,8 +502,7 @@ function tetapBorang(rekod) {
   $('#fDapatan').value = rekod?.dapatan || '';
   $('#fMaklumbalas').value = rekod?.maklumbalas || '';
   let status = rekod?.status || 'Menunggu Maklumbalas';
-  // Status "Ditutup" dipaparkan sebagai Pengesahan PPD (Bahagian A); Bahagian B kekal "Selesai".
-  $('#fPengesahan').value = status === 'Ditutup' ? 'Ditutup' : 'Terbuka';
+  // Rekod "Ditutup" dipaparkan sebagai "Selesai" dalam Bahagian B; penutupan dikekalkan semasa simpan.
   if (status === 'Ditutup') status = 'Selesai';
   if (mod === 'sekolah' && status === 'Menunggu Maklumbalas') status = 'Dalam Tindakan';
   $('#fStatus').value = status;
@@ -620,7 +646,9 @@ function nilaiBorangRekod() {
     jawatan: $('#fJawatan').value.trim(),
     dapatan: $('#fDapatan').value.trim(),
     maklumbalas: $('#fMaklumbalas').value.trim() || null,
-    status: borang?.mod !== 'sekolah' && $('#fPengesahan').value === 'Ditutup' ? 'Ditutup' : $('#fStatus').value,
+    // Kemaskini oleh PPD pada rekod yang telah ditutup kekal "Ditutup" melainkan status Bahagian B ditukar.
+    status: borang?.mod !== 'sekolah' && borang?.rekod?.status === 'Ditutup' && $('#fStatus').value === 'Selesai'
+      ? 'Ditutup' : $('#fStatus').value,
   };
 }
 
@@ -671,6 +699,14 @@ async function simpanRekod(e) {
   } catch (err) {
     borang.menyimpan = false;
     setSibuk(btn, false);
+    if (/ditutup oleh PPD/.test(err?.message || '')) {
+      // PPD telah menutup rekod ini sejak borang dibuka: tutup borang dan segarkan paparan.
+      borang.ubah = false;
+      tetapBorang(null);
+      toast('Rekod ini telah disahkan dan ditutup oleh PPD. Maklumbalas tidak boleh diubah lagi.', 'amaran', 7000);
+      await muatSemula();
+      return;
+    }
     paparMesej($('#mesejRekod'), mesejRalat(err, 'Rekod gagal disimpan. Sila cuba lagi.'), 'ralat');
     return;
   }
@@ -1153,6 +1189,7 @@ async function mula() {
   }
   tetapBorang(null);
   await muatSemula();
+  segarApabilaKembali();
 }
 
 mula().catch((e) => {

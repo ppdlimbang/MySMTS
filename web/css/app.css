@@ -137,6 +137,9 @@ main { flex: 1; padding: 24px 0 48px; }
 .btn-emas:hover:not(:disabled) { background: var(--emas-400); }
 .btn-hijau { background: var(--hijau-700); color: #fff; }
 .btn-hijau:hover:not(:disabled) { background: var(--hijau-800); }
+.btn-garis-hijau { background: #fff; color: var(--hijau-700); border: 1px solid #6ee7b7; }
+.btn-garis-hijau:hover:not(:disabled) { background: var(--hijau-100); }
+.nota-ditutup { font-size: 12px; font-weight: 600; color: var(--hijau-800); background: var(--hijau-100); border: 1px solid #6ee7b7; border-radius: 6px; padding: 4px 10px; }
 .btn-garis { background: #fff; color: var(--kelabu-700); border-color: var(--kelabu-300); }
 .btn-garis:hover:not(:disabled) { background: var(--kelabu-100); }
 .btn-bahaya { background: var(--merah-600); color: #fff; }
