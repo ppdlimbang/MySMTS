@@ -22,6 +22,44 @@ const KELAS_STATUS = {
 
 const dua = (n) => String(n).padStart(2, '0');
 
+/**
+ * Bilangan lajur grid gambar (maksimum 10 gambar setiap bahagian, paling banyak
+ * 2 baris): 1-2 → 2 lajur, 3 → 3, 4 → 4, 5-6 → 3×2, 7-8 → 4×2, 9-10 → 5×2.
+ */
+function lajurGaleri(n) {
+  if (n <= 2) return 2;
+  if (n <= 4) return n;
+  if (n <= 6) return 3;
+  if (n <= 8) return 4;
+  return 5;
+}
+
+const MM = 96 / 25.4; // piksel bagi 1 mm (CSS)
+const TINGGI_HALAMAN_MM = 294; // A4 = 297 mm; sedikit ruang supaya tiada halaman kosong kedua
+const SKALA_MIN = 0.4;
+
+/**
+ * Laporan ialah SATU halaman A4: ukur ketinggian semula jadi laporan dan kecilkan
+ * gambar secara berperingkat (--skala-foto) sehingga semuanya muat dalam satu halaman.
+ */
+function muatkanSatuHalaman(bekas) {
+  const halaman = bekas.querySelector('.cl-halaman');
+  if (!halaman) return;
+  bekas.style.removeProperty('--skala-foto');
+  if (!bekas.querySelector('.cl-bingkai')) return;
+  bekas.classList.add('cl-ukur');
+  try {
+    const had = TINGGI_HALAMAN_MM * MM;
+    let skala = 1;
+    while (halaman.getBoundingClientRect().height > had && skala > SKALA_MIN) {
+      skala = Math.max(SKALA_MIN, skala - 0.03);
+      bekas.style.setProperty('--skala-foto', skala.toFixed(2));
+    }
+  } finally {
+    bekas.classList.remove('cl-ukur');
+  }
+}
+
 function medan(ikon, label, nilai, kelas = '') {
   return `<div class="cl-medan ${kelas}">
       <span class="cl-ikon">${ikon}</span>
@@ -37,12 +75,12 @@ function medan(ikon, label, nilai, kelas = '') {
  */
 export function isiCetakan(bekas, rekod, { namaSekolah, kodSekolah, urlGambar }) {
   const lampiran = rekod.lampiran || [];
-  const galeri = (jenis, kapsyen) => {
-    const senarai = lampiran.filter((l) => l.jenis === jenis && urlGambar(l.laluan));
+  const gambar = (jenis) => lampiran.filter((l) => l.jenis === jenis && urlGambar(l.laluan));
+  const galeri = (senarai, kapsyen) => {
     if (!senarai.length) {
       return `<p class="cl-tiada-gambar">${IKON.kamera}<span>Tiada lampiran gambar.</span></p>`;
     }
-    return `<div class="cl-galeri">${senarai.map((l, i) => `
+    return `<div class="cl-galeri cl-lajur-${lajurGaleri(senarai.length)}">${senarai.map((l, i) => `
       <figure class="cl-foto">
         <div class="cl-bingkai"><img src="${esc(urlGambar(l.laluan))}" alt=""></div>
         <figcaption><strong>FOTO ${dua(i + 1)}</strong><span>${esc(kapsyen)}</span></figcaption>
@@ -52,14 +90,12 @@ export function isiCetakan(bekas, rekod, { namaSekolah, kodSekolah, urlGambar })
     ? `<div class="cl-teks">${esc(nilai)}</div>`
     : `<div class="cl-teks cl-kosong">${esc(ganti)}</div>`);
 
+  const gambarA = gambar('dapatan');
+  const gambarB = gambar('maklumbalas');
   const status = String(rekod.status || '');
   const organisasi = KONFIG.namaOrganisasi;
 
   bekas.innerHTML = `
-    <table class="cl-susun" role="presentation">
-    <thead><tr><td><div class="cl-ruang"></div></td></tr></thead>
-    <tfoot><tr><td><div class="cl-ruang"></div></td></tr></tfoot>
-    <tbody><tr><td>
     <div class="cl-halaman">
       <header class="cl-kepala">
         <div class="cl-kepala-atas">
@@ -93,7 +129,7 @@ export function isiCetakan(bekas, rekod, { namaSekolah, kodSekolah, urlGambar })
         <div class="cl-bahagian-isi">
           ${teks(rekod.dapatan, '[Tiada dapatan direkodkan]')}
           <div class="cl-subtajuk"><span>Lampiran Gambar Dapatan</span></div>
-          ${galeri('dapatan', 'Bukti Dapatan Lawatan')}
+          ${galeri(gambarA, 'Bukti Dapatan Lawatan')}
         </div>
       </section>
 
@@ -110,7 +146,7 @@ export function isiCetakan(bekas, rekod, { namaSekolah, kodSekolah, urlGambar })
             <span>Lampiran Gambar Tindakan</span>
             <span class="cl-tarikh-tindakan">Tarikh Tindakan: <strong>${rekod.maklumbalas_pada ? esc(formatTarikh(rekod.maklumbalas_pada)) : '-'}</strong></span>
           </div>
-          ${galeri('maklumbalas', 'Bukti Tindakan Sekolah')}
+          ${galeri(gambarB, 'Bukti Tindakan Sekolah')}
         </div>
       </section>
 
@@ -118,13 +154,12 @@ export function isiCetakan(bekas, rekod, { namaSekolah, kodSekolah, urlGambar })
         <span class="cl-kaki-jenama">MySMTS · ${esc(organisasi)}, Sarawak</span>
         <span class="cl-kaki-cetak">Dicetak pada ${esc(formatCapMasa(new Date().toISOString()))}</span>
       </footer>
-    </div>
-    </td></tr></tbody>
-    </table>`;
+    </div>`;
 }
 
 /** Tunggu semua gambar dalam bekas dimuatkan (maksimum 10 saat), kemudian cetak. */
 export async function cetakBekas(bekas) {
+  muatkanSatuHalaman(bekas);
   const imej = [...bekas.querySelectorAll('img')];
   await Promise.race([
     Promise.all(imej.map((img) => (img.complete ? null : new Promise((r) => { img.onload = r; img.onerror = r; })))),
