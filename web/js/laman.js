@@ -417,12 +417,10 @@ function paparPanelBorang() {
   $('[data-boleh-tambah="maklumbalas"]').hidden = tunjukKunci;
   $('#wajibMaklumbalas').hidden = mod !== 'sekolah';
   $('#fMaklumbalas').required = mod === 'sekolah';
-  // Sekolah hanya memilih "Dalam Tindakan" atau "Selesai"; "Ditutup" ialah pengesahan PPD.
-  for (const nilai of ['Menunggu Maklumbalas', 'Ditutup']) {
-    const ops = $('#fStatus').querySelector(`option[value="${nilai}"]`);
-    ops.hidden = mod === 'sekolah';
-    ops.disabled = mod === 'sekolah';
-  }
+  // Sekolah hanya memilih "Dalam Tindakan" atau "Selesai". Pengesahan PPD ("Ditutup") berada dalam Bahagian A.
+  const opsMenunggu = $('#fStatus').querySelector('option[value="Menunggu Maklumbalas"]');
+  opsMenunggu.hidden = mod === 'sekolah';
+  opsMenunggu.disabled = mod === 'sekolah';
 
   $('#tajukBorang').textContent = {
     awam: 'Borang Maklumbalas Sekolah',
@@ -477,6 +475,9 @@ function tetapBorang(rekod) {
   $('#fDapatan').value = rekod?.dapatan || '';
   $('#fMaklumbalas').value = rekod?.maklumbalas || '';
   let status = rekod?.status || 'Menunggu Maklumbalas';
+  // Status "Ditutup" dipaparkan sebagai Pengesahan PPD (Bahagian A); Bahagian B kekal "Selesai".
+  $('#fPengesahan').value = status === 'Ditutup' ? 'Ditutup' : 'Terbuka';
+  if (status === 'Ditutup') status = 'Selesai';
   if (mod === 'sekolah' && status === 'Menunggu Maklumbalas') status = 'Dalam Tindakan';
   $('#fStatus').value = status;
   $('#btnSimpanRekod').disabled = false;
@@ -619,7 +620,7 @@ function nilaiBorangRekod() {
     jawatan: $('#fJawatan').value.trim(),
     dapatan: $('#fDapatan').value.trim(),
     maklumbalas: $('#fMaklumbalas').value.trim() || null,
-    status: $('#fStatus').value,
+    status: borang?.mod !== 'sekolah' && $('#fPengesahan').value === 'Ditutup' ? 'Ditutup' : $('#fStatus').value,
   };
 }
 

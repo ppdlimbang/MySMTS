@@ -254,6 +254,21 @@ test('admin: log masuk kekal di laman utama; cipta, kemaskini, padam, cetak lapo
   await page.waitForFunction(() => document.querySelector('#statDitutup').textContent === '0');
   assert.match(await page.textContent(`${kad('Pn. Siti Aminah')} .lencana`), /^Dalam Tindakan$/);
 
+  // Pengesahan PPD juga boleh dibuat dalam Bahagian A borang; Bahagian B hanya status sekolah.
+  assert.equal(await page.locator('#fStatus option[value="Ditutup"]').count(), 0, 'tiada pilihan PPD dalam Bahagian B');
+  await page.click(`${kad('Pn. Siti Aminah')} .rekod-kaki [data-tindakan="edit"]`);
+  await page.waitForFunction(() => document.querySelector('#fDapatan').value.includes('Pusat sumber'));
+  assert.equal(await page.inputValue('#fPengesahan'), 'Terbuka');
+  await page.selectOption('#fPengesahan', 'Ditutup');
+  await page.click('#btnSimpanRekod');
+  await page.waitForSelector('#btnBatalEdit', { state: 'hidden' });
+  await page.waitForFunction(() => document.querySelector('#statDitutup').textContent === '1');
+  assert.match(await page.textContent(`${kad('Pn. Siti Aminah')} .lencana`), /Ditutup · Disahkan PPD/);
+  await page.click(`${kad('Pn. Siti Aminah')} .rekod-kaki [data-tindakan="edit"]`);
+  await page.waitForFunction(() => document.querySelector('#fPengesahan').value === 'Ditutup');
+  assert.equal(await page.inputValue('#fStatus'), 'Selesai', 'Bahagian B kekal Selesai bagi rekod ditutup');
+  await page.click('#btnBatalEdit');
+
   // Cetak laporan
   await page.evaluate(() => { window.print = () => { window.__dicetak = true; }; });
   await page.click(`${kad('SK Limbang')} [data-tindakan="cetak"]`);
