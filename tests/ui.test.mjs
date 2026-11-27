@@ -154,6 +154,14 @@ test('sekolah: log masuk dengan emel sahaja, kekal di laman utama dan isi maklum
   assert.ok(!p2.some((x) => x.jadual === 'rekod_lawatan' && x.op !== 'select'), 'sekolah tidak menulis terus ke rekod_lawatan');
   await page.waitForFunction(() => document.querySelector('#senaraiRekod').textContent.includes('Tindakan pembersihan'));
   await page.waitForFunction(() => /Semua rekod lawatan telah diberi maklumbalas/.test(document.querySelector('#kunciTeks').textContent));
+  assert.match(await page.textContent(`${kad('SK Limbang')} .lencana`), /Selesai · Menunggu Pengesahan PPD/);
+
+  // PPD mengesahkan & menutup -> sekolah tidak lagi boleh mengubah rekod itu.
+  await page.evaluate(() => { const r = window.__PALSU.db.rekod_lawatan.find((x) => x.id === 'r1'); r.status = 'Ditutup'; r.ditutup_pada = new Date().toISOString(); });
+  await page.click('.stat-jumlah');
+  await page.waitForFunction(() => /Ditutup · Disahkan PPD/.test(document.querySelector('#senaraiRekod').textContent));
+  assert.equal(await page.locator(`${kad('SK Limbang')} [data-tindakan="edit"]`).count(), 0, 'tiada butang kemaskini pada rekod ditutup');
+  assert.match(await page.textContent(`${kad('SK Limbang')} .cap-masa`), /Disahkan PPD/);
 
   // Log keluar -> laman awam
   await page.click('#btnLogKeluar');
@@ -230,6 +238,21 @@ test('admin: log masuk kekal di laman utama; cipta, kemaskini, padam, cetak lapo
   await page.click('dialog.kecil[open] [data-jawapan="ya"]');
   await page.waitForSelector('#btnBatalEdit', { state: 'hidden' });
   assert.match(await page.textContent('#tajukBorang'), /Borang Rekod Lawatan Baru/);
+
+  // PPD mengesahkan & menutup rekod yang dilaporkan selesai oleh sekolah, kemudian membuka semula.
+  assert.equal(await page.locator('[data-tindakan="tutup"]').count(), 1, 'butang Sahkan & Tutup hanya pada rekod Selesai');
+  await page.click(`${kad('Pn. Siti Aminah')} [data-tindakan="tutup"]`);
+  await page.waitForSelector('dialog.kecil[open] [data-jawapan="ya"]');
+  assert.match(await page.textContent('dialog.kecil[open]'), /sekolah tidak lagi boleh mengubah/);
+  await page.click('dialog.kecil[open] [data-jawapan="ya"]');
+  await page.waitForFunction(() => document.querySelector('#statDitutup').textContent === '1');
+  assert.match(await page.textContent(`${kad('Pn. Siti Aminah')} .lencana`), /Ditutup · Disahkan PPD/);
+  const pTutup = await panggilan(page);
+  assert.ok(pTutup.some((x) => x.jadual === 'rekod_lawatan' && x.op === 'update' && x.nilai.status === 'Ditutup' && Object.keys(x.nilai).length === 1));
+  await page.click(`${kad('Pn. Siti Aminah')} [data-tindakan="buka"]`);
+  await page.click('dialog.kecil[open] [data-jawapan="ya"]');
+  await page.waitForFunction(() => document.querySelector('#statDitutup').textContent === '0');
+  assert.match(await page.textContent(`${kad('Pn. Siti Aminah')} .lencana`), /^Dalam Tindakan$/);
 
   // Cetak laporan
   await page.evaluate(() => { window.print = () => { window.__dicetak = true; }; });
@@ -342,6 +365,7 @@ test('laman awam: semua rekod dipapar tanpa log masuk, borang dikunci', async (t
   assert.equal(await page.textContent('#statJumlah'), '2');
   assert.equal(await page.textContent('#statMenunggu'), '1');
   assert.equal(await page.textContent('#statSelesai'), '1');
+  assert.equal(await page.textContent('#statDitutup'), '0');
   const html = await page.innerHTML('#senaraiRekod');
   assert.ok(html.includes('SK Limbang') && html.includes('YBA0001'), 'nama & kod sekolah daripada sekolah_awam');
   assert.ok(html.includes('&lt;script&gt;'), 'teks dapatan di-escape');
@@ -370,8 +394,10 @@ test('laman awam: semua rekod dipapar tanpa log masuk, borang dikunci', async (t
   assert.match(await page.textContent('#cetakan .cl-foto figcaption'), /FOTO 01\s*Bukti Dapatan Lawatan/);
   assert.equal(await page.$('#btnEksport'), null);
 
-  await page.click('.stat-selesai');
+  await page.click('.stat-pengesahan');
   await page.waitForFunction(() => document.querySelectorAll('#senaraiRekod article').length === 1);
+  await page.click('.stat-selesai');
+  await page.waitForFunction(() => document.querySelectorAll('#senaraiRekod article').length === 0);
   await page.click('.stat-jumlah');
   await page.waitForFunction(() => document.querySelectorAll('#senaraiRekod article').length === 2);
 

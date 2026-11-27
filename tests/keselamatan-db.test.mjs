@@ -291,6 +291,67 @@ test('jadual lampiran: sekolah hanya menambah/memadam gambar maklumbalas sendiri
   assert.equal(b.affectedRows, 0, 'sekolah lain tidak boleh memadam gambar');
 });
 
+test('aliran pengesahan PPD: hanya pentadbir menutup tiket; rekod ditutup dikunci daripada sekolah', async () => {
+  // Sekolah tidak boleh menutup tiket sendiri.
+  await gagal(sebagai('skA', (tx) => tx.query(`select public.hantar_maklumbalas($1, 'Siap', 'Ditutup')`, [rekodA])), /Status/);
+  // Status tidak dikenali ditolak oleh kekangan.
+  await gagal(sebagai('admin', (tx) => tx.query(`update public.rekod_lawatan set status = 'Lain' where id = $1`, [rekodA])), /status_check/);
+
+  await db.transaction(async (tx) => {
+    const jadi = async (siapa) => {
+      await tx.query(`select set_config('request.jwt.claims', $1, true)`, [JSON.stringify(tuntutan[siapa])]);
+      await tx.exec('reset role');
+      await tx.exec('set local role authenticated');
+    };
+    // Sekolah melaporkan selesai, kemudian PPD mengesahkan dan menutup.
+    await jadi('skA');
+    await tx.query(`select public.hantar_maklumbalas($1, 'Tindakan selesai.', 'Selesai')`, [rekodA]);
+    await jadi('admin');
+    await tx.query(`update public.rekod_lawatan set status = 'Ditutup', ditutup_oleh = $2, ditutup_pada = '2000-01-01' where id = $1`, [rekodA, ID.skA]);
+    let r = await tx.query('select status, ditutup_oleh, ditutup_pada, maklumbalas from public.rekod_lawatan where id = $1', [rekodA]);
+    assert.equal(r.rows[0].status, 'Ditutup');
+    assert.equal(r.rows[0].ditutup_oleh, ID.admin, 'pelaku penutupan ditetapkan oleh pencetus');
+    assert.ok(r.rows[0].ditutup_pada > new Date('2020-01-01'), 'tarikh penutupan tidak boleh dipalsukan');
+    assert.equal(r.rows[0].maklumbalas, 'Tindakan selesai.');
+
+    // Sekolah tidak lagi boleh mengubah Bahagian B atau gambar bukti.
+    await jadi('skA');
+    await tx.exec('savepoint s1');
+    await assert.rejects(tx.query(`select public.hantar_maklumbalas($1, 'Ubah', 'Dalam Tindakan')`, [rekodA]), /ditutup oleh PPD/);
+    await tx.exec('rollback to savepoint s1');
+    await assert.rejects(
+      tx.query(`insert into public.lampiran (rekod_id, jenis, laluan) values ($1::uuid, 'maklumbalas', $1::text || '/maklumbalas/' || $2::text || '.jpg')`, [rekodA, randomUUID()]),
+      /row-level security/);
+    await tx.exec('rollback to savepoint s1');
+    await assert.rejects(
+      tx.query(`insert into storage.objects (bucket_id, name, owner_id) values ('lampiran', $1, $2)`, [`${rekodA}/maklumbalas/${randomUUID()}.jpg`, ID.skA]),
+      /row-level security/);
+    await tx.exec('rollback to savepoint s1');
+    // Masih boleh dibaca.
+    r = await tx.query('select status from public.rekod_lawatan where id = $1', [rekodA]);
+    assert.equal(r.rows[0].status, 'Ditutup');
+
+    // Orang awam melihat tarikh penutupan tetapi bukan pelakunya.
+    await tx.exec('reset role');
+    await tx.query(`select set_config('request.jwt.claims', $1, true)`, [JSON.stringify({ role: 'anon' })]);
+    await tx.exec('set local role anon');
+    r = await tx.query('select ditutup_pada from public.rekod_lawatan where id = $1', [rekodA]);
+    assert.ok(r.rows[0].ditutup_pada);
+    await tx.exec('savepoint s2');
+    await assert.rejects(tx.query('select ditutup_oleh from public.rekod_lawatan'), /permission denied/);
+    await tx.exec('rollback to savepoint s2');
+
+    // PPD boleh membuka semula; sekolah boleh mengemas kini semula.
+    await jadi('admin');
+    await tx.query(`update public.rekod_lawatan set status = 'Dalam Tindakan' where id = $1`, [rekodA]);
+    r = await tx.query('select ditutup_oleh, ditutup_pada from public.rekod_lawatan where id = $1', [rekodA]);
+    assert.deepEqual(r.rows[0], { ditutup_oleh: null, ditutup_pada: null });
+    await jadi('skA');
+    await tx.query(`select public.hantar_maklumbalas($1, 'Tindakan tambahan.', 'Selesai')`, [rekodA]);
+    await tx.rollback();
+  });
+});
+
 test('had 10 gambar bagi setiap bahagian', async () => {
   await sebagai('admin', async (tx) => {
     for (let i = 0; i < 9; i++) {

@@ -69,8 +69,20 @@ export function masaSekarang() {
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
-export const STATUS = ['Menunggu Maklumbalas', 'Dalam Tindakan', 'Selesai'];
+// Aliran status: PPD merekod -> sekolah bertindak (Dalam Tindakan / Selesai) -> PPD mengesahkan (Ditutup).
+export const STATUS = ['Menunggu Maklumbalas', 'Dalam Tindakan', 'Selesai', 'Ditutup'];
+const LABEL_STATUS = {
+  'Menunggu Maklumbalas': 'Menunggu Maklumbalas',
+  'Dalam Tindakan': 'Dalam Tindakan',
+  Selesai: 'Selesai · Menunggu Pengesahan PPD',
+  Ditutup: 'Ditutup · Disahkan PPD',
+};
+/** Label paparan bagi nilai status dalam pangkalan data. */
+export function labelStatus(status) {
+  return LABEL_STATUS[status] || String(status || '');
+}
 export function kelasStatus(status) {
+  if (status === 'Ditutup') return 'lencana-ditutup';
   if (status === 'Selesai') return 'lencana-selesai';
   if (status === 'Dalam Tindakan') return 'lencana-tindakan';
   return 'lencana-menunggu';

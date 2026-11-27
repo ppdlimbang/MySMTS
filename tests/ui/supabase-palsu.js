@@ -105,7 +105,13 @@
         return { data: this.satu ? baru[0] : baru, error: null };
       }
       if (this.op === 'update') {
-        padan.forEach((r) => Object.assign(r, this.nilai));
+        padan.forEach((r) => {
+          Object.assign(r, this.nilai);
+          // Tiruan pencetus private.normal_rekod: tarikh pengesahan PPD.
+          if (this.jadual === 'rekod_lawatan' && 'status' in this.nilai) {
+            r.ditutup_pada = r.status === 'Ditutup' ? new Date().toISOString() : null;
+          }
+        });
         return { data: padan.map((r) => ({ ...r })), error: null };
       }
       if (this.op === 'delete') {
@@ -164,6 +170,7 @@
       if (nama === 'hantar_maklumbalas') {
         const r = P.db.rekod_lawatan.find((x) => x.id === arg.p_rekod_id);
         if (!r) return { data: null, error: { code: 'P0001', message: 'Rekod tidak dijumpai.' } };
+        if (r.status === 'Ditutup') return { data: null, error: { code: 'P0001', message: 'Rekod ini telah disahkan dan ditutup oleh PPD.' } };
         r.maklumbalas = arg.p_maklumbalas;
         r.status = arg.p_status;
         r.maklumbalas_pada = new Date().toISOString();

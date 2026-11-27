@@ -176,6 +176,8 @@ main { flex: 1; padding: 24px 0 48px; }
 .stat-menunggu .stat-nilai { color: #d97706; }
 .stat-tindakan { border-left: 4px solid var(--navy-700); }
 .stat-tindakan .stat-nilai { color: var(--navy-700); }
+.stat-pengesahan { border-left: 4px solid var(--navy-700); }
+.stat-pengesahan .stat-nilai { color: var(--navy-700); }
 .stat-selesai { border-left: 4px solid #059669; }
 .stat-selesai .stat-nilai { color: #059669; }
 
@@ -278,6 +280,7 @@ fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
 .lencana-menunggu { background: var(--emas-100); color: var(--emas-800); border-color: #fcd34d; }
 .lencana-tindakan { background: var(--biru-100); color: var(--biru-800); border-color: #93c5fd; }
 .lencana-selesai { background: var(--hijau-100); color: var(--hijau-800); border-color: #6ee7b7; }
+.lencana-ditutup { background: var(--hijau-700); color: #fff; border-color: var(--hijau-800); }
 .lencana-aktif { background: var(--hijau-100); color: var(--hijau-800); border-color: #6ee7b7; }
 .lencana-tidak-aktif { background: var(--kelabu-100); color: var(--kelabu-600); border-color: var(--kelabu-300); }
 
@@ -396,7 +399,7 @@ dialog.lightbox::backdrop { background: rgb(15 23 42 / 85%); }
 .jam-tarikh { font-size: 12px; color: var(--kelabu-400); }
 .ruang-bawah { margin-bottom: 16px; }
 
-.statistik.statistik-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); margin-bottom: 28px; }
+.statistik.statistik-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); margin-bottom: 28px; }
 .stat-label, .stat-nilai { display: block; }
 .stat-nota { display: block; font-size: 12px; color: var(--kelabu-500); margin-top: 6px; }
 
@@ -446,7 +449,7 @@ dialog.lightbox::backdrop { background: rgb(15 23 42 / 85%); }
   .panel-borang { position: static; }
 }
 @media (max-width: 640px) {
-  .statistik.statistik-3 { grid-template-columns: 1fr; }
+  .statistik.statistik-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .jam, .jenama-sub { display: none; }
   .kepala-kanan { width: 100%; justify-content: space-between; }
 }
@@ -562,6 +565,14 @@ dialog.lightbox::backdrop { background: rgb(15 23 42 / 85%); }
 }
 .cl-status.tindakan { background: var(--biru-100); color: var(--biru-800); border-color: #93c5fd; }
 .cl-status.selesai { background: var(--hijau-100); color: var(--hijau-800); border-color: #6ee7b7; }
+.cl-status.ditutup { background: var(--hijau-700); color: #fff; border-color: var(--hijau-800); }
+.cl-tarikh-sah { margin-left: auto; }
+.cl-tarikh-sah + .cl-tarikh-tindakan { margin-left: 0; }
+.cl-tarikh-sah {
+  flex: none; font-weight: 600; color: var(--hijau-800);
+  background: var(--hijau-100); border: 0.3mm solid #6ee7b7; border-radius: 99px; padding: 0.6mm 3mm;
+}
+.cl-tarikh-sah strong { color: var(--kelabu-900); }
 
 .cl-bahagian-isi { padding: 3.5mm 4.5mm 4.5mm; }
 .cl-teks {
@@ -639,7 +650,7 @@ dialog.lightbox::backdrop { background: rgb(15 23 42 / 85%); }
 /* ---------- Responsif ---------- */
 
 @media (max-width: 900px) {
-  .statistik { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .statistik, .statistik.statistik-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 640px) {
   body { font-size: 14px; }

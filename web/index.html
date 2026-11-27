@@ -71,7 +71,7 @@
 
       <!-- ================= REKOD LAWATAN ================= -->
       <section id="paparan-rekod" data-paparan-panel="rekod">
-        <div class="statistik statistik-3" aria-label="Ringkasan">
+        <div class="statistik statistik-4" aria-label="Ringkasan">
           <button type="button" class="stat stat-jumlah" data-status="SEMUA" aria-pressed="true">
             <span class="stat-label">Jumlah Lawatan Direkod</span>
             <span class="stat-nilai" id="statJumlah">–</span>
@@ -82,10 +82,15 @@
             <span class="stat-nilai" id="statMenunggu">–</span>
             <span class="stat-nota">Belum diisi oleh pihak sekolah</span>
           </button>
-          <button type="button" class="stat stat-selesai" data-status="Selesai" aria-pressed="false">
-            <span class="stat-label">Selesai / Diisi Sekolah</span>
+          <button type="button" class="stat stat-pengesahan" data-status="Selesai" aria-pressed="false">
+            <span class="stat-label">Menunggu Pengesahan PPD</span>
             <span class="stat-nilai" id="statSelesai">–</span>
-            <span class="stat-nota">Tindakan sekolah lengkap</span>
+            <span class="stat-nota">Sekolah melaporkan tindakan selesai</span>
+          </button>
+          <button type="button" class="stat stat-selesai" data-status="Ditutup" aria-pressed="false">
+            <span class="stat-label">Ditutup / Disahkan PPD</span>
+            <span class="stat-nilai" id="statDitutup">–</span>
+            <span class="stat-nota">Tindakan disahkan oleh PPD</span>
           </button>
         </div>
 
@@ -202,7 +207,8 @@
                     <select class="input" id="fStatus" required>
                       <option value="Menunggu Maklumbalas">Menunggu Maklumbalas Sekolah</option>
                       <option value="Dalam Tindakan">Dalam Tindakan (Proses Penambahbaikan)</option>
-                      <option value="Selesai">Selesai (Telah Mengambil Tindakan)</option>
+                      <option value="Selesai">Selesai (Hantar untuk Pengesahan PPD)</option>
+                      <option value="Ditutup">Ditutup (Disahkan oleh PPD)</option>
                     </select>
                   </label>
                 </fieldset>
@@ -229,7 +235,8 @@
                   <option value="SEMUA">Semua Status</option>
                   <option value="Menunggu Maklumbalas">Menunggu Maklumbalas</option>
                   <option value="Dalam Tindakan">Dalam Tindakan</option>
-                  <option value="Selesai">Selesai</option>
+                  <option value="Selesai">Menunggu Pengesahan PPD</option>
+                  <option value="Ditutup">Ditutup / Disahkan PPD</option>
                 </select>
               </label>
             </div>

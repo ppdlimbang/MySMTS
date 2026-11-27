@@ -1,7 +1,7 @@
 // Templat "Cetak Laporan" A4 bagi satu rekod lawatan.
 // Reka bentuk: Borang Maklumbalas & Tindakan Sekolah (premium), mengikut warna sistem
 // (biru tua + emas), logo MySMTS dan data sebenar rekod.
-import { esc, formatTarikh, formatMasa, formatCapMasa, IKON_LOGO } from './util.js';
+import { esc, formatTarikh, formatMasa, formatCapMasa, IKON_LOGO, labelStatus } from './util.js';
 import { KONFIG } from './klien.js';
 
 const svg = (isi) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${isi}</svg>`;
@@ -18,6 +18,7 @@ const KELAS_STATUS = {
   'Menunggu Maklumbalas': 'menunggu',
   'Dalam Tindakan': 'tindakan',
   Selesai: 'selesai',
+  Ditutup: 'ditutup',
 };
 
 const dua = (n) => String(n).padStart(2, '0');
@@ -137,13 +138,14 @@ export function isiCetakan(bekas, rekod, { namaSekolah, kodSekolah, urlGambar })
         <div class="cl-bahagian-kepala">
           <span class="cl-lencana">BAHAGIAN B</span>
           <h3>MAKLUMBALAS &amp; TINDAKAN PIHAK SEKOLAH</h3>
-          <span class="cl-status ${KELAS_STATUS[status] || ''}">${esc(status.toUpperCase())}</span>
+          <span class="cl-status ${KELAS_STATUS[status] || ''}">${esc(labelStatus(status).toUpperCase())}</span>
           <span class="cl-nombor">02</span>
         </div>
         <div class="cl-bahagian-isi">
           ${teks(rekod.maklumbalas, '[Belum ada maklumbalas daripada pihak sekolah]')}
           <div class="cl-subtajuk">
             <span>Lampiran Gambar Tindakan</span>
+            ${rekod.ditutup_pada ? `<span class="cl-tarikh-sah">Disahkan PPD: <strong>${esc(formatTarikh(rekod.ditutup_pada))}</strong></span>` : ''}
             <span class="cl-tarikh-tindakan">Tarikh Tindakan: <strong>${rekod.maklumbalas_pada ? esc(formatTarikh(rekod.maklumbalas_pada)) : '-'}</strong></span>
           </div>
           ${galeri(gambarB, 'Bukti Tindakan Sekolah')}

@@ -10,8 +10,19 @@
 
 | Peranan | Cara log masuk | Akses |
 |---|---|---|
-| **Pentadbir PPD** | Emel rasmi + kata laluan | Cipta, kemas kini dan padam rekod lawatan; urus senarai sekolah; lihat log audit; cetak laporan; tukar kata laluan sendiri |
-| **Sekolah** | Emel rasmi sekolah sahaja (tiada kod, tiada kata laluan) | Lihat rekod sekolah sendiri sahaja; isi maklumbalas, status dan gambar bukti (Bahagian B) |
+| **Pentadbir PPD** | Emel rasmi + kata laluan | Cipta, kemas kini dan padam rekod lawatan; **sahkan & tutup** atau buka semula rekod; urus senarai sekolah; lihat log audit; cetak laporan; tukar kata laluan sendiri |
+| **Sekolah** | Emel rasmi sekolah sahaja (tiada kod, tiada kata laluan) | Isi maklumbalas, status dan gambar bukti (Bahagian B) bagi rekod sekolah sendiri yang belum ditutup |
+
+## Aliran status
+
+| Status | Ditetapkan oleh | Maksud |
+|---|---|---|
+| **Menunggu Maklumbalas** | Pentadbir PPD (rekod baharu) | Sekolah belum mengisi Bahagian B |
+| **Dalam Tindakan** | Sekolah | Sekolah sedang mengambil tindakan penambahbaikan |
+| **Selesai · Menunggu Pengesahan PPD** | Sekolah | Sekolah melaporkan tindakan telah lengkap |
+| **Ditutup · Disahkan PPD** | Pentadbir PPD (butang **Sahkan & Tutup**) | PPD mengesahkan tindakan; rekod dikunci daripada sekolah |
+
+Pentadbir boleh **Buka Semula** rekod yang telah ditutup (status kembali kepada *Dalam Tindakan*) jika tindakan lanjut diperlukan.
 
 Semua rekod lawatan boleh dilihat oleh orang awam tanpa log masuk (emel sekolah tidak didedahkan). Mengisi atau mengubah rekod memerlukan log masuk. Hanya emel yang didaftarkan oleh pentadbir boleh log masuk. Pendaftaran awam dimatikan. Sistem tidak menghantar emel.
 

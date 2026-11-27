@@ -6,7 +6,7 @@
 // Kebenaran sebenar dikuatkuasakan oleh RLS dalam pangkalan data.
 import { sb, konfigSah, dapatkanProfil, tetapKataLaluanPentadbir, BALDI } from './klien.js';
 import {
-  $, $$, esc, formatTarikh, formatMasa, formatCapMasa, tarikhHariIni, masaSekarang, STATUS, kelasStatus,
+  $, $$, esc, formatTarikh, formatMasa, formatCapMasa, tarikhHariIni, masaSekarang, STATUS, kelasStatus, labelStatus,
   toast, mesejRalat, setSibuk, paparMesej, mampatGambar, sahkan, bersihCarian,
   EMEL_SAH, normalEmel, IKON_LOGO, semakKekuatanKataLaluan, alamatLaman,
 } from './util.js';
@@ -18,7 +18,7 @@ const TEMPOH_URL_SAAT = 3600;
 const SAIZ_AUDIT = 50;
 const PILIH_REKOD = [
   'id', 'sekolah_id', 'tarikh', 'masa', 'nama_pegawai', 'jawatan', 'dapatan', 'maklumbalas', 'status',
-  'dicipta_pada', 'maklumbalas_pada', 'lampiran(id,jenis,laluan,dicipta_pada)',
+  'dicipta_pada', 'maklumbalas_pada', 'ditutup_pada', 'lampiran(id,jenis,laluan,dicipta_pada)',
 ].join(',');
 const PILIH_REKOD_LOG_MASUK = PILIH_REKOD.replace('lampiran(id,jenis,laluan,dicipta_pada)', 'lampiran(id,jenis,laluan,dimuat_naik_oleh,dicipta_pada)');
 
@@ -27,7 +27,8 @@ const keadaan = {
   sekolah: [], // admin: dengan emel & aktif; lain-lain: id, nama, kod sahaja
   penapis: { carian: '', status: 'SEMUA' },
   rekod: [],
-  rekodSaya: [], // sekolah: rekod lawatan sekolah sendiri (untuk pilihan borang)
+  rekodSaya: [], // sekolah: rekod lawatan sekolah sendiri yang belum ditutup (untuk pilihan borang)
+  rekodSayaDitutup: 0, // sekolah: bilangan rekod yang telah disahkan & ditutup oleh PPD
   jumlah: 0,
   urlGambar: new Map(), // laluan -> { url, tamat }
   auditDari: 0,
@@ -39,7 +40,8 @@ let borang = null; // keadaan borang kiri
 
 const admin = () => keadaan.profil?.peranan === 'admin';
 const sekolahSaya = () => (keadaan.profil?.peranan === 'sekolah' ? keadaan.profil.sekolah?.id || null : null);
-const bolehUrus = (r) => admin() || (sekolahSaya() && sekolahSaya() === r.sekolah_id);
+// Sekolah hanya boleh mengurus Bahagian B rekod sendiri yang belum disahkan & ditutup oleh PPD.
+const bolehUrus = (r) => admin() || Boolean(sekolahSaya() && sekolahSaya() === r.sekolah_id && r.status !== 'Ditutup');
 const muatSemulaHalaman = (cari = '') => window.location.replace(alamatLaman() + cari);
 
 // =====================================================================
@@ -134,8 +136,8 @@ async function muatStatistik() {
     if (status) q = q.eq('status', status);
     return q;
   };
-  const hasil = await Promise.all([kira(null), kira('Menunggu Maklumbalas'), kira('Selesai')]);
-  ['#statJumlah', '#statMenunggu', '#statSelesai'].forEach((s, i) => {
+  const hasil = await Promise.all([kira(null), kira('Menunggu Maklumbalas'), kira('Selesai'), kira('Ditutup')]);
+  ['#statJumlah', '#statMenunggu', '#statSelesai', '#statDitutup'].forEach((s, i) => {
     $(s).textContent = hasil[i].error ? '–' : String(hasil[i].count ?? 0);
   });
 }
@@ -194,9 +196,13 @@ async function muatRekodSaya() {
     console.warn('Rekod sekolah tidak dapat dimuatkan:', error);
     return;
   }
+  // Rekod yang telah ditutup oleh PPD tidak lagi boleh dikemas kini oleh sekolah.
+  const semua = data || [];
+  keadaan.rekodSayaDitutup = semua.filter((r) => r.status === 'Ditutup').length;
   // Rekod yang belum diberi maklumbalas dipaparkan dahulu.
-  keadaan.rekodSaya = (data || []).sort((a, b) => Number(Boolean(a.maklumbalas)) - Number(Boolean(b.maklumbalas)));
-  $('#pilihRekodSekolah').innerHTML = '<option value="">— Pilih rekod lawatan —</option>' + keadaan.rekodSaya.map((r) => `<option value="${esc(r.id)}">${esc(formatTarikh(r.tarikh))} · ${esc(r.nama_pegawai)} · ${esc(r.maklumbalas ? r.status : 'Menunggu maklumbalas')}</option>`).join('');
+  keadaan.rekodSaya = semua.filter((r) => r.status !== 'Ditutup')
+    .sort((a, b) => Number(Boolean(a.maklumbalas)) - Number(Boolean(b.maklumbalas)));
+  $('#pilihRekodSekolah').innerHTML = '<option value="">— Pilih rekod lawatan —</option>' + keadaan.rekodSaya.map((r) => `<option value="${esc(r.id)}">${esc(formatTarikh(r.tarikh))} · ${esc(r.nama_pegawai)} · ${esc(r.maklumbalas ? labelStatus(r.status) : 'Menunggu maklumbalas')}</option>`).join('');
   if (!borang) paparPanelBorang();
 }
 
@@ -234,7 +240,7 @@ function htmlGaleri(lampiran, label, namaSek) {
 function htmlIsiSekarang(r) {
   if (r.maklumbalas) return '';
   if (!keadaan.profil) return '<button type="button" class="btn-pautan" data-tindakan="log-masuk">Isi sekarang</button>';
-  if (sekolahSaya() === r.sekolah_id) return `<button type="button" class="btn-pautan" data-tindakan="edit" data-id="${esc(r.id)}">Isi sekarang</button>`;
+  if (!admin() && bolehUrus(r)) return `<button type="button" class="btn-pautan" data-tindakan="edit" data-id="${esc(r.id)}">Isi sekarang</button>`;
   return '';
 }
 
@@ -259,6 +265,8 @@ function paparRekod() {
     let butangUrus = '';
     if (admin()) {
       butangUrus = `<button type="button" class="btn btn-utama btn-kecil" data-tindakan="edit" data-id="${esc(r.id)}">Kemaskini / Isi Sekolah</button>`;
+      if (r.status === 'Selesai') butangUrus += `<button type="button" class="btn btn-hijau btn-kecil" data-tindakan="tutup" data-id="${esc(r.id)}">Sahkan &amp; Tutup</button>`;
+      if (r.status === 'Ditutup') butangUrus += `<button type="button" class="btn btn-garis btn-kecil" data-tindakan="buka" data-id="${esc(r.id)}">Buka Semula</button>`;
     } else if (bolehUrus(r)) {
       butangUrus = `<button type="button" class="btn btn-emas btn-kecil" data-tindakan="edit" data-id="${esc(r.id)}">${r.maklumbalas ? 'Kemaskini maklumbalas' : 'Isi maklumbalas'}</button>`;
     }
@@ -269,7 +277,7 @@ function paparRekod() {
             <p class="rekod-meta">${esc(formatTarikh(r.tarikh))}${masa ? ` · ${esc(masa)}` : ''}${kod ? ` · ${esc(kod)}` : ''}</p>
             <h3>${esc(namaSek)}</h3>
           </div>
-          <span class="lencana ${kelasStatus(r.status)}">${esc(r.status)}</span>
+          <span class="lencana ${kelasStatus(r.status)}">${esc(labelStatus(r.status))}</span>
         </div>
         <div class="rekod-badan">
           <div class="pegawai">
@@ -292,7 +300,7 @@ function paparRekod() {
         <div class="rekod-kaki">
           ${butangUrus}
           <button type="button" class="btn btn-garis btn-kecil" data-tindakan="cetak" data-id="${esc(r.id)}">Cetak Laporan</button>
-          <span class="cap-masa kanan">${r.maklumbalas_pada ? `Maklumbalas: ${esc(formatCapMasa(r.maklumbalas_pada))}` : `Direkod: ${esc(formatCapMasa(r.dicipta_pada))}`}</span>
+          <span class="cap-masa kanan">${r.ditutup_pada ? `Disahkan PPD: ${esc(formatCapMasa(r.ditutup_pada))}` : (r.maklumbalas_pada ? `Maklumbalas: ${esc(formatCapMasa(r.maklumbalas_pada))}` : `Direkod: ${esc(formatCapMasa(r.dicipta_pada))}`)}</span>
           ${admin() ? `<button type="button" class="btn btn-bahaya-garis btn-kecil" data-tindakan="padam" data-id="${esc(r.id)}">Padam</button>` : ''}
         </div>
       </article>`;
@@ -319,6 +327,37 @@ function klikSenaraiRekod(e) {
   if (t === 'edit') editRekod(rekod);
   if (t === 'cetak') cetakRekod(rekod, b);
   if (t === 'padam') padamRekod(rekod);
+  if (t === 'tutup') tukarStatusPpd(rekod, 'Ditutup', b);
+  if (t === 'buka') tukarStatusPpd(rekod, 'Dalam Tindakan', b);
+}
+
+/** Admin PPD mengesahkan & menutup tiket, atau membuka semula untuk tindakan lanjut sekolah. */
+async function tukarStatusPpd(rekod, status, butang) {
+  if (!admin()) return;
+  const sekolah = namaSekolah(rekod.sekolah_id) || 'sekolah';
+  const tutup = status === 'Ditutup';
+  const ya = await sahkan(tutup ? {
+    tajuk: 'Sahkan & tutup rekod ini?',
+    mesej: `Anda mengesahkan bahawa tindakan ${sekolah} bagi lawatan pada ${formatTarikh(rekod.tarikh)} telah selesai. Rekod akan ditutup dan sekolah tidak lagi boleh mengubah maklumbalas atau gambar bukti.`,
+    teksYa: 'Ya, sahkan & tutup',
+    bahaya: false,
+  } : {
+    tajuk: 'Buka semula rekod ini?',
+    mesej: `Rekod lawatan ke ${sekolah} pada ${formatTarikh(rekod.tarikh)} akan dibuka semula dengan status "Dalam Tindakan" supaya sekolah boleh mengemas kini tindakan.`,
+    teksYa: 'Ya, buka semula',
+    bahaya: false,
+  });
+  if (!ya) return;
+  setSibuk(butang, true);
+  const { data, error } = await sb.from('rekod_lawatan').update({ status }).eq('id', rekod.id).select('id');
+  setSibuk(butang, false);
+  if (error || !data?.length) {
+    toast(error ? mesejRalat(error) : 'Rekod tidak dijumpai.', 'ralat');
+    return;
+  }
+  if (borang?.rekod?.id === rekod.id) tetapBorang(null);
+  toast(tutup ? 'Rekod disahkan dan ditutup.' : 'Rekod dibuka semula.', 'berjaya');
+  await muatSemula();
 }
 
 function tetapStatus(status) {
@@ -355,9 +394,13 @@ function paparPanelBorang() {
     const nama = keadaan.profil.sekolah?.nama || 'sekolah anda';
     const menunggu = keadaan.rekodSaya.filter((r) => !r.maklumbalas).length;
     $('#kunciTajuk').textContent = `Anda log masuk sebagai ${nama}`;
-    $('#kunciTeks').textContent = keadaan.rekodSaya.length
-      ? `${menunggu ? `${menunggu} rekod lawatan menunggu maklumbalas anda.` : 'Semua rekod lawatan telah diberi maklumbalas.'} Pilih rekod di bawah (atau klik "Isi maklumbalas" pada rekod dalam senarai) untuk mengisi Bahagian B.`
-      : `Belum ada rekod lawatan untuk ${nama}. Borang maklumbalas (Bahagian B) akan dibuka selepas pegawai PPD merekod lawatan ke sekolah anda.`;
+    if (keadaan.rekodSaya.length) {
+      $('#kunciTeks').textContent = `${menunggu ? `${menunggu} rekod lawatan menunggu maklumbalas anda.` : 'Semua rekod lawatan telah diberi maklumbalas.'} Pilih rekod di bawah (atau klik "Isi maklumbalas" pada rekod dalam senarai) untuk mengisi Bahagian B. Pilih "Selesai" apabila tindakan lengkap untuk dihantar kepada PPD bagi pengesahan.`;
+    } else if (keadaan.rekodSayaDitutup) {
+      $('#kunciTeks').textContent = `Semua rekod lawatan ${nama} telah disahkan dan ditutup oleh PPD. Tiada maklumbalas yang perlu diisi buat masa ini.`;
+    } else {
+      $('#kunciTeks').textContent = `Belum ada rekod lawatan untuk ${nama}. Borang maklumbalas (Bahagian B) akan dibuka selepas pegawai PPD merekod lawatan ke sekolah anda.`;
+    }
   }
   $('#pilihRekodBalut').hidden = !(mod === 'tunggu' && keadaan.rekodSaya.length);
 
@@ -374,9 +417,12 @@ function paparPanelBorang() {
   $('[data-boleh-tambah="maklumbalas"]').hidden = tunjukKunci;
   $('#wajibMaklumbalas').hidden = mod !== 'sekolah';
   $('#fMaklumbalas').required = mod === 'sekolah';
-  const opsMenunggu = $('#fStatus').querySelector('option[value="Menunggu Maklumbalas"]');
-  opsMenunggu.hidden = mod === 'sekolah';
-  opsMenunggu.disabled = mod === 'sekolah';
+  // Sekolah hanya memilih "Dalam Tindakan" atau "Selesai"; "Ditutup" ialah pengesahan PPD.
+  for (const nilai of ['Menunggu Maklumbalas', 'Ditutup']) {
+    const ops = $('#fStatus').querySelector(`option[value="${nilai}"]`);
+    ops.hidden = mod === 'sekolah';
+    ops.disabled = mod === 'sekolah';
+  }
 
   $('#tajukBorang').textContent = {
     awam: 'Borang Maklumbalas Sekolah',
