@@ -114,11 +114,6 @@ export function isiCetakan(bekas, rekod, { namaSekolah, kodSekolah, urlGambar })
         </div>
       </section>
 
-      <div class="cl-tandatangan">
-        <div><span class="cl-label">Disediakan oleh (Pegawai PPD)</span><div class="cl-garis"><strong>${esc(String(rekod.nama_pegawai || '').toUpperCase())}</strong><span>${esc(rekod.jawatan || '')}</span></div></div>
-        <div><span class="cl-label">Disahkan oleh (Pihak Sekolah)</span><div class="cl-garis"><strong>( Tandatangan &amp; Cop Rasmi )</strong><span>Pengetua / Guru Besar</span></div></div>
-      </div>
-
       <footer class="cl-kaki">
         <span class="cl-kaki-jenama">MySMTS · ${esc(organisasi)}, Sarawak</span>
         <span class="cl-kaki-cetak">Dicetak pada ${esc(formatCapMasa(new Date().toISOString()))}</span>
