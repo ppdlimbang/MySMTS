@@ -462,13 +462,19 @@ dialog.lightbox::backdrop { background: rgb(15 23 42 / 85%); }
 #cetakan { display: none; }
 
 @media print {
-  @page { size: A4 portrait; margin: 10mm 11mm; }
+  /* Margin 0 = pelayar tidak menambah kepala/kaki sendiri (tarikh, tajuk, URL).
+     Ruang tepi diganti oleh padding #cetakan dan baris thead/tfoot yang berulang setiap halaman. */
+  @page { size: A4 portrait; margin: 0; }
+  #cetakan { padding: 0 12mm; }
   body { background: #fff; display: block; font-size: 10pt; color: var(--kelabu-900); }
   body > *:not(#cetakan) { display: none !important; }
   #cetakan { display: block !important; }
 }
 
 #cetakan, #cetakan * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.cl-susun { width: 100%; border-collapse: collapse; border-spacing: 0; }
+.cl-susun td { padding: 0; vertical-align: top; }
+.cl-ruang { height: 9mm; }
 .cl-halaman { font-family: var(--fon); color: var(--kelabu-900); font-size: 10pt; line-height: 1.45; }
 
 /* Kepala */
@@ -581,7 +587,7 @@ dialog.lightbox::backdrop { background: rgb(15 23 42 / 85%); }
 .cl-b .cl-foto { border-color: #fde68a; background: var(--emas-50); }
 .cl-bingkai {
   --sudut: var(--emas-500);
-  height: 35mm; padding: 1.4mm; border-radius: 1.5mm; background-color: #fff;
+  height: 33mm; padding: 1.4mm; border-radius: 1.5mm; background-color: #fff;
   background-image:
     linear-gradient(var(--sudut), var(--sudut)), linear-gradient(var(--sudut), var(--sudut)),
     linear-gradient(var(--sudut), var(--sudut)), linear-gradient(var(--sudut), var(--sudut)),
@@ -608,15 +614,15 @@ dialog.lightbox::backdrop { background: rgb(15 23 42 / 85%); }
 
 /* Tandatangan & kaki */
 .cl-tandatangan {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 12mm; margin-top: 3mm; break-inside: avoid; text-align: center;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 12mm; margin-top: 2mm; break-inside: avoid; text-align: center;
 }
 .cl-garis {
-  margin: 9mm auto 0; width: 80%; border-top: 0.3mm solid var(--kelabu-700); padding-top: 1.2mm; font-size: 9pt;
+  margin: 7mm auto 0; width: 80%; border-top: 0.3mm solid var(--kelabu-700); padding-top: 1.2mm; font-size: 9pt;
 }
 .cl-garis strong, .cl-garis span { display: block; }
 .cl-garis span { color: var(--kelabu-600); }
 .cl-kaki {
-  display: flex; flex-direction: column; align-items: center; gap: 0.8mm; margin-top: 4mm; break-inside: avoid;
+  display: flex; flex-direction: column; align-items: center; gap: 0.8mm; margin-top: 3mm; break-inside: avoid;
 }
 .cl-kaki-jenama { display: flex; align-items: center; gap: 3mm; font-size: 8.5pt; color: var(--kelabu-600); }
 .cl-kaki-jenama::before, .cl-kaki-jenama::after { content: ""; width: 9mm; height: 0.5mm; border-radius: 1mm; background: #d4a95a; }

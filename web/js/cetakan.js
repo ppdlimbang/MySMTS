@@ -56,6 +56,10 @@ export function isiCetakan(bekas, rekod, { namaSekolah, kodSekolah, urlGambar })
   const organisasi = KONFIG.namaOrganisasi;
 
   bekas.innerHTML = `
+    <table class="cl-susun" role="presentation">
+    <thead><tr><td><div class="cl-ruang"></div></td></tr></thead>
+    <tfoot><tr><td><div class="cl-ruang"></div></td></tr></tfoot>
+    <tbody><tr><td>
     <div class="cl-halaman">
       <header class="cl-kepala">
         <div class="cl-kepala-atas">
@@ -119,7 +123,9 @@ export function isiCetakan(bekas, rekod, { namaSekolah, kodSekolah, urlGambar })
         <span class="cl-kaki-jenama">MySMTS · ${esc(organisasi)}, Sarawak</span>
         <span class="cl-kaki-cetak">Dicetak pada ${esc(formatCapMasa(new Date().toISOString()))}</span>
       </footer>
-    </div>`;
+    </div>
+    </td></tr></tbody>
+    </table>`;
 }
 
 /** Tunggu semua gambar dalam bekas dimuatkan (maksimum 10 saat), kemudian cetak. */
